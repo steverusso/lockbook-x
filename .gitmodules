@@ -1,0 +1,3 @@
+[submodule "lockbook"]
+	path = lockbook
+	url = https://github.com/lockbook/lockbook.git

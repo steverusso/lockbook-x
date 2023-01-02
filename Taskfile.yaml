@@ -1,0 +1,19 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  build-core:
+    dir: lockbook/core
+    vars:
+      C_INTERFACE: src/external_interface/c_interface.rs
+      HEADER: lockbook_core.h
+    cmds:
+      - cargo build --release
+      - cbindgen {{.C_INTERFACE}} --lang c > {{.HEADER}}
+
+  lbcli:
+    dir: lbcli
+    cmds:
+      - task: build-core
+      - cargo build --release
