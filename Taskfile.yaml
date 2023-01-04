@@ -4,15 +4,15 @@ version: '3'
 
 tasks:
   build-core:
-    dir: lockbook/core
+    dir: lockbook/libs/core
     vars:
       C_INTERFACE: src/external_interface/c_interface.rs
       HEADER: lockbook_core.h
     cmds:
-      - cargo build --release
+      - cargo build -q --release
       - cbindgen {{.C_INTERFACE}} --lang c > {{.HEADER}}
 
-  lbcli:
+  lbcli-rs:
     dir: lbcli
     cmds:
       - task: build-core
