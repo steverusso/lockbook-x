@@ -32,10 +32,9 @@ fn finfo(core: &lb::Core, args: FinfoArgs) -> Result<(), CliError> {
     match file_from_path_or_id(core, &args.target) {
         Ok(f) => print_file(&f, args.raw, &my_name),
         Err(err) => {
-            let root_id = core.get_root()?.id;
             let ids = core
-                .get_and_get_children_recursively(root_id)
-                .map_err(|err| (err, root_id))?
+                .list_metadatas()
+                .map_err(|err| CliError(format!("listing metadatas: {:?}", err)))?
                 .into_iter()
                 .filter_map(|f| {
                     if f.id.to_string().starts_with(&args.target) {

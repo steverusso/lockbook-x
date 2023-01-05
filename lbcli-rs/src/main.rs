@@ -121,7 +121,7 @@ fn rm(core: &Core, target: &str, force: bool) -> Result<(), CliError> {
                 .map_err(|err| (err, f.id))?
                 .len();
             phrase = format!("{phrase} and its {count} children")
-        };
+        }
 
         let answer: String = util::input(format!("are you sure you want to {phrase}? [y/n]: "))?;
         if answer != "y" && answer != "Y" {

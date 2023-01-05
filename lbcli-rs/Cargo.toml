@@ -1,5 +1,5 @@
 [package]
-name = "lbcli"
+name = "lbcli-rs"
 version = "0.1.0"
 edition = "2018"
 

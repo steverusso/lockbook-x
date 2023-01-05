@@ -108,6 +108,10 @@ fn status(core: &Core) -> Result<(), CliError> {
                 println!("type: Google Play");
                 println!("state: {:?}", account_state);
             }
+            lb::PaymentPlatform::AppStore { account_state } => {
+                println!("type: App Store");
+                println!("state: {:?}", account_state);
+            }
         }
         println!("renews on: {}", info.period_end);
     } else {
@@ -124,6 +128,7 @@ fn subscribe(core: &Core) -> Result<(), CliError> {
             .and_then(|info| match info.payment_platform {
                 lb::PaymentPlatform::Stripe { card_last_4_digits } => Some(card_last_4_digits),
                 lb::PaymentPlatform::GooglePlay { .. } => None,
+                lb::PaymentPlatform::AppStore { .. } => None,
             });
 
     let mut use_old_card = false;
