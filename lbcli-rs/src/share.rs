@@ -62,21 +62,16 @@ fn to_share_infos(files: Vec<lb::File>) -> Vec<ShareInfo> {
     let mut infos: Vec<ShareInfo> = files
         .into_iter()
         .map(|f| {
-            let from = f
+            let (from, mode) = f
                 .shares
                 .get(0)
-                .map(|sh| sh.shared_by.clone())
-                .unwrap_or_default();
-            let mode = f
-                .shares
-                .get(0)
-                .map(|sh| sh.mode)
-                .unwrap_or(lb::ShareMode::Write);
+                .map(|sh| (sh.shared_by.as_str(), sh.mode))
+                .unwrap_or(("", lb::ShareMode::Write));
             ShareInfo {
                 id: f.id,
                 mode: mode.to_string().to_lowercase(),
                 name: f.name,
-                from,
+                from: from.to_string(),
             }
         })
         .collect();
