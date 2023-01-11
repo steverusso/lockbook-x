@@ -12,6 +12,15 @@ tasks:
       - cargo build -q --release
       - cbindgen {{.C_INTERFACE}} --lang c > {{.HEADER}}
 
+  c-ffi-v2:
+    dir: c_interface_v2
+    vars:
+      C_INTERFACE: src/lib.rs
+      HEADER: lockbook_core.h
+    cmds:
+      - cargo build -q --release
+      - cbindgen {{.C_INTERFACE}} --lang c > {{.HEADER}}
+
   lbcli-rs:
     dir: lbcli
     cmds:
