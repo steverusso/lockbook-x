@@ -2,6 +2,9 @@
 
 version: '3'
 
+vars:
+  GO_LDFLAGS: '-ldflags "-s -w"'
+
 tasks:
   c-ffi-v2:
     dir: c_interface_v2
@@ -10,7 +13,22 @@ tasks:
       HEADER: lockbook_core.h
     cmds:
       - cargo build -q --release
-      - cbindgen {{.C_INTERFACE}} --lang c > {{.HEADER}}
+      - cbindgen {{.C_INTERFACE}} --lang c > ../{{.HEADER}}
 
   lbcli-rs:
     - cargo build -p lbcli-rs -q --release
+
+  go-fmt:
+    - goimports -w -l .
+    - gofumpt -w -l .
+
+  go-lint:
+    - go vet ./...
+
+  lbcli:
+    dir: lbcli
+    cmds:
+      - task: c-ffi-v2
+      - task: go-fmt
+      - go build {{.GO_LDFLAGS}}
+      - task: go-lint
