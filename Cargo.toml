@@ -1,0 +1,16 @@
+[workspace]
+members = [
+	"c_interface_v2",
+	"lbcli-rs",
+]
+exclude = [
+	"lockbook/libs/core/libs/test_utils",
+	"lockbook/server/server",
+	"lockbook/clients/cli",
+	"lockbook/clients/egui",
+	"lockbook/clients/linux",
+	"lockbook/clients/admin",
+	"lockbook/utils/dev-tool",
+	"lockbook/utils/releaser",
+	"lockbook/utils/winstaller",
+]
