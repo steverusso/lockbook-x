@@ -73,6 +73,18 @@ pub fn init(core: &Core, args: InitArgs) -> Result<(), CliError> {
     Ok(())
 }
 
+pub fn whoami(core: &Core, long: bool) -> Result<(), CliError> {
+    let acct = core.get_account()?;
+    if long {
+        println!("username: {}", acct.username);
+        println!("data-dir: {}", core.config.writeable_path);
+        println!("server:   {}", acct.api_url);
+    } else {
+        println!("{}", acct.username);
+    }
+    Ok(())
+}
+
 pub fn acct(core: &Core, cmd: AcctCmd) -> Result<(), CliError> {
     match cmd {
         AcctCmd::Privkey => privkey(core),

@@ -80,10 +80,12 @@ enum LbCli {
         #[structopt(long)]
         exact: bool,
     },
-    /// Prints this lockbook's data directory and its server
-    Whereami,
     /// Prints your lockbook username
-    Whoami,
+    Whoami {
+        /// Show data directory and server url as well
+        #[structopt(long, short)]
+        long: bool,
+    },
     /// Write content from stdin to a lockbook doc
     Write {
         /// Overwrite the doc content instead of appending
@@ -279,16 +281,7 @@ fn run() -> Result<(), CliError> {
         LbCli::Status => status(&core),
         LbCli::Sync { verbose } => sync(&core, verbose),
         LbCli::Usage { exact } => usage(&core, exact),
-        LbCli::Whereami => {
-            let account = core.get_account()?;
-            println!("core: {}", core.config.writeable_path);
-            println!("server: {}", account.api_url);
-            Ok(())
-        }
-        LbCli::Whoami => {
-            println!("{}", core.get_account()?.username);
-            Ok(())
-        }
+        LbCli::Whoami { long } => account::whoami(&core, long),
         LbCli::Write { trunc, path } => write(&core, trunc, &path),
     }
 }
