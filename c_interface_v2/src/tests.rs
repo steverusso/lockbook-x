@@ -1,4 +1,3 @@
-
 #[test]
 fn ffi_api_location_matches() {
     unsafe {

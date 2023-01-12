@@ -137,11 +137,11 @@ func (l *lbCoreFFI) CreateFile(name, parentID string, typ FileType) (File, error
 	defer C.lb_file_type_free(cTyp)
 	switch typ := typ.(type) {
 	case FileTypeFolder:
-		cTyp.tag = C.LbFileTypeTagFolder
+		cTyp.tag = C.LB_FILE_TYPE_TAG_FOLDER
 	case FileTypeLink:
 		cTarget := C.CString(typ.Target)
 		defer C.free(unsafe.Pointer(cTarget))
-		cTyp.tag = C.LbFileTypeTagLink
+		cTyp.tag = C.LB_FILE_TYPE_TAG_LINK
 		cTyp.link_target = cTarget
 	}
 
@@ -331,9 +331,9 @@ func (l *lbCoreFFI) ShareFile(id, uname string, mode ShareMode) error {
 	defer C.free(unsafe.Pointer(cID))
 	cUname := C.CString(uname)
 	defer C.free(unsafe.Pointer(cUname))
-	cMode := C.LbShareModeRead
+	cMode := C.LB_SHARE_MODE_READ
 	if mode == ShareModeWrite {
-		cMode = C.LbShareModeWrite
+		cMode = C.LB_SHARE_MODE_WRITE
 	}
 	e := C.lb_share_file(l.ref, cID, cUname, uint32(cMode))
 	defer C.lb_error_free(e)
@@ -446,11 +446,11 @@ func newFileFromFFI(f *C.LbFile) File {
 	}
 	var ft FileType
 	switch {
-	case f.typ.tag == C.LbFileTypeTagDocument:
+	case f.typ.tag == C.LB_FILE_TYPE_TAG_DOCUMENT:
 		ft = FileTypeDocument{}
-	case f.typ.tag == C.LbFileTypeTagFolder:
+	case f.typ.tag == C.LB_FILE_TYPE_TAG_FOLDER:
 		ft = FileTypeFolder{}
-	case f.typ.tag == C.LbFileTypeTagLink:
+	case f.typ.tag == C.LB_FILE_TYPE_TAG_LINK:
 		ft = FileTypeLink{Target: C.GoString(f.typ.link_target)}
 	}
 	return File{

@@ -6,17 +6,13 @@ vars:
   GO_LDFLAGS: '-ldflags "-s -w"'
 
 tasks:
-  c-ffi-v2:
-    dir: c_interface_v2
-    vars:
-      C_INTERFACE: src/lib.rs
-      HEADER: lockbook_core.h
+  lbcli:
+    dir: lbcli
     cmds:
-      - cargo build -q --release
-      - cbindgen {{.C_INTERFACE}} --lang c > ../{{.HEADER}}
-
-  lbcli-rs:
-    - cargo build -p lbcli-rs -q --release
+      - task: c-ffi-v2
+      - task: go-fmt
+      - go build {{.GO_LDFLAGS}}
+      - task: go-lint
 
   go-fmt:
     - goimports -w -l .
@@ -25,10 +21,24 @@ tasks:
   go-lint:
     - go vet ./...
 
-  lbcli:
-    dir: lbcli
+  c-ffi-v2:
+    dir: c_interface_v2
+    vars:
+      C_INTERFACE: src/lib.rs
+      HEADER: lockbook_core.h
     cmds:
-      - task: c-ffi-v2
-      - task: go-fmt
-      - go build {{.GO_LDFLAGS}}
-      - task: go-lint
+      - task: rust-fmt
+      - cargo build -q --release
+      - cbindgen {{.C_INTERFACE}} --config ./cbindgen.toml > ../{{.HEADER}}
+      - task: rust-lint
+
+  lbcli-rs:
+    - task: rust-fmt
+    - cargo build -p lbcli-rs -q --release
+    - task: rust-lint
+
+  rust-fmt:
+    - cargo fmt --all --message-format short
+
+  rust-lint:
+    - cargo clippy -q --workspace
