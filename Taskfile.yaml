@@ -14,6 +14,14 @@ tasks:
       - go build {{.GO_LDFLAGS}}
       - task: go-lint
 
+  lbedit:
+    dir: lbedit
+    cmds:
+      - task: c-ffi-v2
+      - task: go-fmt
+      - go build {{.GO_LDFLAGS}}
+      - task: go-lint
+
   go-fmt:
     - goimports -w -l .
     - gofumpt -w -l .
