@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"path"
 	"sort"
-	"strings"
 
+	"github.com/steverusso/lockbook-x/go-lockbook"
 	lb "github.com/steverusso/lockbook-x/go-lockbook"
 )
 
@@ -72,6 +72,7 @@ func (node *fileNode) printOut(cfg *lsConfig) {
 }
 
 func getChildren(core lb.Core, files []lb.File, parent string, cfg *lsConfig) ([]fileNode, error) {
+	lockbook.SortFiles(files)
 	children := []fileNode{}
 	for i := range files {
 		f := &files[i]
@@ -139,16 +140,6 @@ func getChildren(core lb.Core, files []lb.File, parent string, cfg *lsConfig) ([
 		child.children = childsChildren
 		children = append(children, child)
 	}
-	sort.SliceStable(children, func(i, j int) bool {
-		a, b := children[i], children[j]
-		if a.isDir && !b.isDir {
-			return true
-		}
-		if !a.isDir && b.isDir {
-			return false
-		}
-		return strings.Compare(a.name, b.name) < 0
-	})
 	return children, nil
 }
 

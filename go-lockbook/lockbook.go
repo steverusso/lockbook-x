@@ -2,6 +2,7 @@ package lockbook
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -171,6 +172,19 @@ func (s ShareMode) String() string {
 	default:
 		return "ShareMode(" + strconv.FormatInt(int64(s), 10) + ")"
 	}
+}
+
+func SortFiles(files []File) {
+	sort.SliceStable(files, func(i, j int) bool {
+		a, b := files[i], files[j]
+		if a.IsDir() && !b.IsDir() {
+			return true
+		}
+		if !a.IsDir() && b.IsDir() {
+			return false
+		}
+		return a.Name < b.Name
+	})
 }
 
 type WorkCalculated struct {
