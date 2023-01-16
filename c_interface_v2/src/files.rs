@@ -343,6 +343,22 @@ pub unsafe extern "C" fn lb_get_path_by_id(core: *mut c_void, id: *const c_char)
 
 /// # Safety
 ///
+/// The returned value must be passed to `lb_file_result_free` to avoid a memory leak.
+#[no_mangle]
+pub unsafe extern "C" fn lb_get_root(core: *mut c_void) -> LbFileResult {
+    let mut r = lb_file_result_new();
+    match core!(core).get_root() {
+        Ok(f) => r.ok = lb_file_new(f),
+        Err(err) => {
+            r.err.msg = cstr(format!("{:?}", err));
+            r.err.code = LbErrorCode::Unexpected;
+        }
+    }
+    r
+}
+
+/// # Safety
+///
 /// The returned value must be passed to `lb_file_list_result_free` to avoid a memory leak.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_children(core: *mut c_void, id: *const c_char) -> LbFileListResult {

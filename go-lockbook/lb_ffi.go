@@ -87,6 +87,12 @@ func (l *lbCoreFFI) PathByID(id string) (string, error) {
 	return ffiStringResultToGo(r)
 }
 
+func (l *lbCoreFFI) GetRoot() (File, error) {
+	r := C.lb_get_root(l.ref)
+	defer C.lb_file_result_free(r)
+	return ffiFileResultToGo(r)
+}
+
 func (l *lbCoreFFI) GetChildren(id string) ([]File, error) {
 	cID := C.CString(id)
 	defer C.free(unsafe.Pointer(cID))

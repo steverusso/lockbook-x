@@ -19,7 +19,6 @@ The following are `lockbook-core` endpoints that have yet to be implemented (rou
 order of priority):
 
 * `get_last_synced`
-* `get_root`
 * `import_file`
 * `get_drawing`
 * `save_drawing`

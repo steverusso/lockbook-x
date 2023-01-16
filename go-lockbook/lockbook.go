@@ -14,6 +14,7 @@ type Core interface {
 
 	FileByID(id string) (File, error)
 	FileByPath(lbPath string) (File, error)
+	GetRoot() (File, error)
 	GetChildren(id string) ([]File, error)
 	GetAndGetChildrenRecursively(id string) ([]File, error)
 	ListMetadatas() ([]File, error)
