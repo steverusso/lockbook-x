@@ -25,35 +25,35 @@ impl From<lb::UnexpectedError> for CliError {
     }
 }
 
-impl From<LbError<lb::AccountExportError>> for CliError {
-    fn from(err: LbError<lb::AccountExportError>) -> Self {
-        Self(format!("exporting account: {:?}", err))
-    }
+macro_rules! impl_from_lb_errors_for_cli_error {
+    ($( $ctx:literal, $uierr:ident ),*) => {
+        $(
+            impl From<LbError<lb::$uierr>> for CliError {
+                fn from(err: LbError<lb::$uierr>) -> Self {
+                    Self(format!("{}: {:?}", $ctx, err))
+                }
+            }
+        )*
+    };
 }
 
-impl From<LbError<lb::CalculateWorkError>> for CliError {
-    fn from(err: LbError<lb::CalculateWorkError>) -> Self {
-        Self(format!("calculating work: {:?}", err))
-    }
-}
-
-impl From<LbError<lb::CancelSubscriptionError>> for CliError {
-    fn from(err: LbError<lb::CancelSubscriptionError>) -> Self {
-        Self(format!("canceling subscription: {:?}", err))
-    }
-}
-
-impl From<LbError<lb::CreateAccountError>> for CliError {
-    fn from(err: LbError<lb::CreateAccountError>) -> Self {
-        Self(format!("creating account: {:?}", err))
-    }
-}
-
-impl From<LbError<lb::CreateFileAtPathError>> for CliError {
-    fn from(err: LbError<lb::CreateFileAtPathError>) -> Self {
-        Self(format!("creating file at path: {:?}", err))
-    }
-}
+#[rustfmt::skip]
+impl_from_lb_errors_for_cli_error!(
+    "exporting account", AccountExportError,
+    "calculating work", CalculateWorkError,
+    "canceling subscription", CancelSubscriptionError,
+    "creating account", CreateAccountError,
+    "creating file at path", CreateFileAtPathError,
+    "feature flag err", FeatureFlagError,
+    "getting account", GetAccountError,
+    "getting root", GetRootError,
+    "getting subscription info", GetSubscriptionInfoError,
+    "getting usage", GetUsageError,
+    "importing account", ImportError,
+    "sharing file", ShareFileError,
+    "syncing", SyncAllError,
+    "upgrading via stripe", UpgradeAccountStripeError
+);
 
 impl From<(LbError<lb::ExportDrawingError>, Uuid)> for CliError {
     fn from(v: (LbError<lb::ExportDrawingError>, Uuid)) -> Self {
@@ -69,22 +69,10 @@ impl From<(LbError<lb::ExportFileError>, PathBuf)> for CliError {
     }
 }
 
-impl From<LbError<lb::FeatureFlagError>> for CliError {
-    fn from(err: LbError<lb::FeatureFlagError>) -> Self {
-        Self(format!("feature flag err: {:?}", err))
-    }
-}
-
 impl From<(LbError<lb::FileDeleteError>, Uuid)> for CliError {
     fn from(v: (LbError<lb::FileDeleteError>, Uuid)) -> Self {
         let (err, id) = v;
         Self(format!("deleting file with id '{}': {:?}", id, err))
-    }
-}
-
-impl From<LbError<lb::GetAccountError>> for CliError {
-    fn from(err: LbError<lb::GetAccountError>) -> Self {
-        Self(format!("getting account: {:?}", err))
     }
 }
 
@@ -106,30 +94,6 @@ impl From<(LbError<lb::GetFileByPathError>, &str)> for CliError {
     fn from(v: (LbError<lb::GetFileByPathError>, &str)) -> Self {
         let (err, path) = v;
         Self(format!("get file by path '{}': {:?}", path, err))
-    }
-}
-
-impl From<LbError<lb::GetRootError>> for CliError {
-    fn from(err: LbError<lb::GetRootError>) -> Self {
-        Self(format!("getting root: {:?}", err))
-    }
-}
-
-impl From<LbError<lb::GetSubscriptionInfoError>> for CliError {
-    fn from(err: LbError<lb::GetSubscriptionInfoError>) -> Self {
-        Self(format!("getting subscription info: {:?}", err))
-    }
-}
-
-impl From<LbError<lb::GetUsageError>> for CliError {
-    fn from(err: LbError<lb::GetUsageError>) -> Self {
-        Self(format!("getting usage: {:?}", err))
-    }
-}
-
-impl From<LbError<lb::ImportError>> for CliError {
-    fn from(err: LbError<lb::ImportError>) -> Self {
-        Self(format!("importing account: {:?}", err))
     }
 }
 
@@ -158,24 +122,6 @@ impl From<(LbError<lb::RenameFileError>, Uuid)> for CliError {
     fn from(v: (LbError<lb::RenameFileError>, Uuid)) -> Self {
         let (err, id) = v;
         Self(format!("renaming file '{}': {:?}", id, err))
-    }
-}
-
-impl From<LbError<lb::ShareFileError>> for CliError {
-    fn from(err: LbError<lb::ShareFileError>) -> Self {
-        Self(format!("sharing file: {:?}", err))
-    }
-}
-
-impl From<LbError<lb::SyncAllError>> for CliError {
-    fn from(err: LbError<lb::SyncAllError>) -> Self {
-        Self(format!("syncing: {:?}", err))
-    }
-}
-
-impl From<LbError<lb::UpgradeAccountStripeError>> for CliError {
-    fn from(err: LbError<lb::UpgradeAccountStripeError>) -> Self {
-        Self(format!("upgrading account via stripe: {:?}", err))
     }
 }
 
