@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	lb "github.com/steverusso/lockbook-x/go-lockbook"
 )
@@ -46,7 +45,7 @@ func printFile(f lb.File, myName string) {
 		{"id", f.ID},
 		{"parent", f.Parent},
 		{"type", strings.ToLower(lb.FileTypeString(f.Type))},
-		{"lastmod", fmt.Sprintf("%v", time.UnixMilli(f.Lastmod))},
+		{"lastmod", fmt.Sprintf("%v", f.Lastmod)},
 		{"lastmod_by", f.LastmodBy},
 		{fmt.Sprintf("shares (%d)", len(f.Shares)), shares},
 	}

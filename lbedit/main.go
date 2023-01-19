@@ -119,7 +119,7 @@ func (li *lbFileInfo) Mode() fs.FileMode {
 }
 
 func (li *lbFileInfo) ModTime() time.Time {
-	return time.UnixMilli(li.File.Lastmod)
+	return li.File.Lastmod
 }
 
 func (li *lbFileInfo) Size() int64 {

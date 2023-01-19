@@ -111,7 +111,7 @@ type File struct {
 	Parent    string
 	Name      string
 	Type      FileType
-	Lastmod   int64
+	Lastmod   time.Time
 	LastmodBy string
 	Shares    []Share
 }

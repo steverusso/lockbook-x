@@ -464,7 +464,7 @@ func newFileFromFFI(f *C.LbFile) File {
 		Parent:    C.GoString(f.parent),
 		Name:      C.GoString(f.name),
 		Type:      ft,
-		Lastmod:   int64(f.lastmod),
+		Lastmod:   time.UnixMilli(int64(f.lastmod)),
 		LastmodBy: C.GoString(f.lastmod_by),
 		Shares:    shares,
 	}
