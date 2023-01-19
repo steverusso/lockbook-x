@@ -95,16 +95,6 @@ enum LbCli {
     },
 }
 
-fn cat(core: &Core, targets: Vec<String>) -> Result<(), CliError> {
-    for v in &targets {
-        let id = util::id_from_path_or_id(core, v)?;
-        let content = core.read_document(id).map_err(|err| (err, id))?;
-        print!("{}", String::from_utf8_lossy(&content));
-        io::stdout().flush()?;
-    }
-    Ok(())
-}
-
 fn mk(core: &Core, p: &str) -> Result<(), CliError> {
     if util::maybe_get_by_path(core, p)?.is_none() {
         let _ = core.create_at_path(p)?;
@@ -149,8 +139,8 @@ fn status(core: &Core) -> Result<(), CliError> {
 
 fn sync(core: &Core, verbose: bool) -> Result<(), CliError> {
     println!("syncing...");
-    let progress_closure = if verbose {
-        |sp: lb::SyncProgress| {
+    core.sync(if verbose {
+        Some(Box::new(|sp: lb::SyncProgress| {
             use lb::ClientWorkUnit::*;
             match sp.current_work_unit {
                 PullMetadata => println!("pulling file tree updates"),
@@ -158,11 +148,10 @@ fn sync(core: &Core, verbose: bool) -> Result<(), CliError> {
                 PullDocument(name) => println!("pulling: {}", name),
                 PushDocument(name) => println!("pushing: {}", name),
             };
-        }
+        }))
     } else {
-        |_| {}
-    };
-    core.sync(Some(Box::new(progress_closure)))?;
+        None
+    })?;
     Ok(())
 }
 
@@ -247,7 +236,15 @@ fn run() -> Result<(), CliError> {
 
     match cli {
         LbCli::Acct(cmd) => account::acct(&core, cmd),
-        LbCli::Cat { targets } => cat(&core, targets),
+        LbCli::Cat { targets } => {
+            for v in &targets {
+                let id = util::id_from_path_or_id(&core, v)?;
+                let content = core.read_document(id).map_err(|err| (err, id))?;
+                print!("{}", String::from_utf8_lossy(&content));
+                io::stdout().flush()?;
+            }
+            Ok(())
+        }
         LbCli::Debug(cmd) => debug::debug(&core, cmd),
         LbCli::Drawing(args) => imex::drawing(&core, args),
         LbCli::Export(args) => imex::export(&core, args),
