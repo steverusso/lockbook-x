@@ -165,7 +165,7 @@ dependencies = [
  "smol_str",
  "thiserror",
  "tokio",
- "uuid",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -1692,7 +1692,7 @@ dependencies = [
 
 [[package]]
 name = "lockbook-core"
-version = "0.5.7"
+version = "0.5.10"
 dependencies = [
  "backtrace",
  "base64 0.13.1",
@@ -1729,13 +1729,13 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
- "uuid",
+ "uuid 1.2.2",
  "variant_count",
 ]
 
 [[package]]
 name = "lockbook-server"
-version = "0.5.7"
+version = "0.5.10"
 dependencies = [
  "async-stripe",
  "base64 0.13.1",
@@ -1762,7 +1762,7 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
- "uuid",
+ "uuid 1.2.2",
  "warp",
  "x509-parser",
 ]
@@ -1786,7 +1786,7 @@ dependencies = [
  "sha2 0.9.9",
  "test_utils",
  "tracing",
- "uuid",
+ "uuid 1.2.2",
 ]
 
 [[package]]
@@ -3112,7 +3112,7 @@ dependencies = [
  "itertools",
  "lockbook-core",
  "lockbook-shared",
- "uuid",
+ "uuid 1.2.2",
 ]
 
 [[package]]
@@ -3573,6 +3573,15 @@ name = "uuid"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+dependencies = [
+ "getrandom 0.2.8",
+]
+
+[[package]]
+name = "uuid"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "422ee0de9031b5b948b97a8fc04e3aa35230001a722ddd27943e0be31564ce4c"
 dependencies = [
  "getrandom 0.2.8",
  "serde",
