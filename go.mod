@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	gioui.org v0.0.0-20221116222243-5c84cf7e9021
+	github.com/gofrs/uuid v4.3.1+incompatible
 	github.com/steverusso/gio-fonts v0.0.0-20221207034752-d3d43d7eae48
 	github.com/steverusso/mdedit v0.0.0-20221215033847-21feaf69cd7a
 	github.com/urfave/cli/v2 v2.23.7

@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/gofrs/uuid"
 )
 
 type Core interface {
@@ -130,7 +132,7 @@ type (
 
 	FileTypeDocument struct{}
 	FileTypeFolder   struct{}
-	FileTypeLink     struct{ Target string }
+	FileTypeLink     struct{ Target uuid.UUID }
 )
 
 func (_ FileTypeDocument) implsFileType() {}
@@ -144,7 +146,7 @@ func FileTypeString(t FileType) string {
 	case FileTypeFolder:
 		return "Folder"
 	case FileTypeLink:
-		return "Link('" + t.Target + "')"
+		return "Link('" + t.Target.String() + "')"
 	default:
 		return fmt.Sprintf("FileType(%v)", t)
 	}

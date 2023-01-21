@@ -24,7 +24,7 @@ pub fn lb_file_new(f: File) -> LbFile {
     }
     if let FileType::Link { target } = f.file_type {
         typ.tag = LbFileTypeTag::Link;
-        typ.link_target = cstr(target.to_string());
+        typ.link_target = target.into_bytes();
     }
     LbFile {
         id: cstr(f.id.to_string()),
@@ -50,7 +50,6 @@ pub unsafe fn lb_file_free(f: LbFile) {
     if !f.lastmod_by.is_null() {
         let _ = CString::from_raw(f.lastmod_by);
     }
-    lb_file_type_free(f.typ);
     lb_share_list_free(f.shares);
 }
 
@@ -58,7 +57,7 @@ pub unsafe fn lb_file_free(f: LbFile) {
 #[repr(C)]
 pub struct LbFileType {
     tag: LbFileTypeTag,
-    link_target: *mut c_char,
+    link_target: [u8; 16],
 }
 
 #[repr(C)]
@@ -72,15 +71,7 @@ pub enum LbFileTypeTag {
 pub extern "C" fn lb_file_type_doc() -> LbFileType {
     LbFileType {
         tag: LbFileTypeTag::Document,
-        link_target: null_mut(),
-    }
-}
-
-/// # Safety
-#[no_mangle]
-pub unsafe extern "C" fn lb_file_type_free(t: LbFileType) {
-    if !t.link_target.is_null() {
-        let _ = CString::from_raw(t.link_target);
+        link_target: [0; 16],
     }
 }
 
@@ -234,10 +225,9 @@ pub unsafe extern "C" fn lb_create_file(
     let ftype = match ft.tag {
         LbFileTypeTag::Document => FileType::Document,
         LbFileTypeTag::Folder => FileType::Folder,
-        LbFileTypeTag::Link => {
-            let target = uuid_or_return!(ft.link_target, r);
-            FileType::Link { target }
-        }
+        LbFileTypeTag::Link => FileType::Link {
+            target: Uuid::from_bytes(ft.link_target),
+        },
     };
     match core!(core).create_file(rstr(name), parent, ftype) {
         Ok(f) => r.ok = lb_file_new(f),

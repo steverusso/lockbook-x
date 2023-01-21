@@ -15,6 +15,8 @@ import (
 	"runtime/cgo"
 	"time"
 	"unsafe"
+
+	"github.com/gofrs/uuid"
 )
 
 type lbCoreFFI struct {
@@ -140,15 +142,15 @@ func (l *lbCoreFFI) CreateFile(name, parentID string, typ FileType) (File, error
 	defer C.free(unsafe.Pointer(cParentID))
 
 	cTyp := C.lb_file_type_doc()
-	defer C.lb_file_type_free(cTyp)
 	switch typ := typ.(type) {
 	case FileTypeFolder:
 		cTyp.tag = C.LB_FILE_TYPE_TAG_FOLDER
 	case FileTypeLink:
-		cTarget := C.CString(typ.Target)
-		defer C.free(unsafe.Pointer(cTarget))
 		cTyp.tag = C.LB_FILE_TYPE_TAG_LINK
-		cTyp.link_target = cTarget
+		var i C.size_t
+		for i = 0; i < 16; i++ {
+			cTyp.link_target[i] = C.uint8_t(typ.Target[i])
+		}
 	}
 
 	r := C.lb_create_file(l.ref, cName, cParentID, cTyp)
@@ -457,7 +459,12 @@ func newFileFromFFI(f *C.LbFile) File {
 	case f.typ.tag == C.LB_FILE_TYPE_TAG_FOLDER:
 		ft = FileTypeFolder{}
 	case f.typ.tag == C.LB_FILE_TYPE_TAG_LINK:
-		ft = FileTypeLink{Target: C.GoString(f.typ.link_target)}
+		target := [16]byte{}
+		var i C.size_t
+		for i = 0; i < 16; i++ {
+			target[i] = byte(f.typ.link_target[i])
+		}
+		ft = FileTypeLink{Target: uuid.UUID(target)}
 	}
 	return File{
 		ID:        C.GoString(f.id),
