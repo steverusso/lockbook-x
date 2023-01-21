@@ -65,10 +65,8 @@ func (l *lbCoreFFI) ExportAccount() (string, error) {
 	return ffiStringResultToGo(r)
 }
 
-func (l *lbCoreFFI) FileByID(id string) (File, error) {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
-	r := C.lb_get_file_by_id(l.ref, cID)
+func (l *lbCoreFFI) FileByID(id uuid.UUID) (File, error) {
+	r := C.lb_get_file_by_id(l.ref, cFileID(id))
 	defer C.lb_file_result_free(r)
 	return ffiFileResultToGo(r)
 }
@@ -81,10 +79,8 @@ func (l *lbCoreFFI) FileByPath(lbPath string) (File, error) {
 	return ffiFileResultToGo(r)
 }
 
-func (l *lbCoreFFI) PathByID(id string) (string, error) {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
-	r := C.lb_get_path_by_id(l.ref, cID)
+func (l *lbCoreFFI) PathByID(id uuid.UUID) (string, error) {
+	r := C.lb_get_path_by_id(l.ref, cFileID(id))
 	defer C.lb_string_result_free(r)
 	return ffiStringResultToGo(r)
 }
@@ -95,18 +91,14 @@ func (l *lbCoreFFI) GetRoot() (File, error) {
 	return ffiFileResultToGo(r)
 }
 
-func (l *lbCoreFFI) GetChildren(id string) ([]File, error) {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
-	r := C.lb_get_children(l.ref, cID)
+func (l *lbCoreFFI) GetChildren(id uuid.UUID) ([]File, error) {
+	r := C.lb_get_children(l.ref, cFileID(id))
 	defer C.lb_file_list_result_free(r)
 	return ffiFileListResultToGo(r)
 }
 
-func (l *lbCoreFFI) GetAndGetChildrenRecursively(id string) ([]File, error) {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
-	r := C.lb_get_and_get_children_recursively(l.ref, cID)
+func (l *lbCoreFFI) GetAndGetChildrenRecursively(id uuid.UUID) ([]File, error) {
+	r := C.lb_get_and_get_children_recursively(l.ref, cFileID(id))
 	defer C.lb_file_list_result_free(r)
 	return ffiFileListResultToGo(r)
 }
@@ -117,29 +109,23 @@ func (l *lbCoreFFI) ListMetadatas() ([]File, error) {
 	return ffiFileListResultToGo(r)
 }
 
-func (l *lbCoreFFI) ReadDocument(id string) ([]byte, error) {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
-	r := C.lb_read_document(l.ref, cID)
+func (l *lbCoreFFI) ReadDocument(id uuid.UUID) ([]byte, error) {
+	r := C.lb_read_document(l.ref, cFileID(id))
 	defer C.lb_bytes_result_free(r)
 	return ffiBytesResultToGo(r)
 }
 
-func (l *lbCoreFFI) WriteDocument(id string, data []byte) error {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
+func (l *lbCoreFFI) WriteDocument(id uuid.UUID, data []byte) error {
 	cData := C.CBytes(data)
 	defer C.free(unsafe.Pointer(cData))
-	e := C.lb_write_document(l.ref, cID, (*C.uchar)(cData), C.int(len(data)))
+	e := C.lb_write_document(l.ref, cFileID(id), (*C.uchar)(cData), C.int(len(data)))
 	defer C.lb_error_free(e)
 	return newErrorFromFFI(e)
 }
 
-func (l *lbCoreFFI) CreateFile(name, parentID string, typ FileType) (File, error) {
+func (l *lbCoreFFI) CreateFile(name string, parentID uuid.UUID, typ FileType) (File, error) {
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
-	cParentID := C.CString(parentID)
-	defer C.free(unsafe.Pointer(cParentID))
 
 	cTyp := C.lb_file_type_doc()
 	switch typ := typ.(type) {
@@ -153,7 +139,7 @@ func (l *lbCoreFFI) CreateFile(name, parentID string, typ FileType) (File, error
 		}
 	}
 
-	r := C.lb_create_file(l.ref, cName, cParentID, cTyp)
+	r := C.lb_create_file(l.ref, cName, cFileID(parentID), cTyp)
 	defer C.lb_file_result_free(r)
 	return ffiFileResultToGo(r)
 }
@@ -166,30 +152,22 @@ func (l *lbCoreFFI) CreateFileAtPath(lbPath string) (File, error) {
 	return ffiFileResultToGo(r)
 }
 
-func (l *lbCoreFFI) DeleteFile(id string) error {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
-	e := C.lb_delete_file(l.ref, cID)
+func (l *lbCoreFFI) DeleteFile(id uuid.UUID) error {
+	e := C.lb_delete_file(l.ref, cFileID(id))
 	defer C.lb_error_free(e)
 	return newErrorFromFFI(e)
 }
 
-func (l *lbCoreFFI) RenameFile(id, newName string) error {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
+func (l *lbCoreFFI) RenameFile(id uuid.UUID, newName string) error {
 	cNewName := C.CString(newName)
 	defer C.free(unsafe.Pointer(cNewName))
-	e := C.lb_rename_file(l.ref, cID, cNewName)
+	e := C.lb_rename_file(l.ref, cFileID(id), cNewName)
 	defer C.lb_error_free(e)
 	return newErrorFromFFI(e)
 }
 
-func (l *lbCoreFFI) MoveFile(srcID, destID string) error {
-	cSrcID := C.CString(srcID)
-	defer C.free(unsafe.Pointer(cSrcID))
-	cDestID := C.CString(destID)
-	defer C.free(unsafe.Pointer(cDestID))
-	e := C.lb_move_file(l.ref, cSrcID, cDestID)
+func (l *lbCoreFFI) MoveFile(srcID, destID uuid.UUID) error {
+	e := C.lb_move_file(l.ref, cFileID(srcID), cFileID(destID))
 	defer C.lb_error_free(e)
 	return newErrorFromFFI(e)
 }
@@ -201,7 +179,7 @@ func go_imex_callback(info C.LbImexFileInfo, handlePtr unsafe.Pointer) {
 	fn(info)
 }
 
-func (l *lbCoreFFI) ExportFile(id, dest string, fn func(ImportExportFileInfo)) error {
+func (l *lbCoreFFI) ExportFile(id uuid.UUID, dest string, fn func(ImportExportFileInfo)) error {
 	handle := cgo.NewHandle(func(cInfo C.LbImexFileInfo) {
 		defer C.lb_imex_file_info_free(cInfo)
 		if fn == nil {
@@ -216,19 +194,15 @@ func (l *lbCoreFFI) ExportFile(id, dest string, fn func(ImportExportFileInfo)) e
 	handlePtr := C.malloc(C.sizeof_uintptr_t)
 	defer C.free(handlePtr)
 	*(*C.uintptr_t)(handlePtr) = C.uintptr_t(handle)
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
 	cDest := C.CString(dest)
 	defer C.free(unsafe.Pointer(cDest))
-	e := C.lb_export_file(l.ref, cID, cDest, C.LbImexCallback(C.go_imex_callback), handlePtr)
+	e := C.lb_export_file(l.ref, cFileID(id), cDest, C.LbImexCallback(C.go_imex_callback), handlePtr)
 	defer C.lb_error_free(e)
 	return newErrorFromFFI(e)
 }
 
-func (l *lbCoreFFI) ExportDrawing(id string, imgFmt ImageFormat) ([]byte, error) {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
-	r := C.lb_export_drawing(l.ref, cID, C.uchar(imgFmt))
+func (l *lbCoreFFI) ExportDrawing(id uuid.UUID, imgFmt ImageFormat) ([]byte, error) {
+	r := C.lb_export_drawing(l.ref, cFileID(id), C.uchar(imgFmt))
 	defer C.lb_bytes_result_free(r)
 	return ffiBytesResultToGo(r)
 }
@@ -334,16 +308,14 @@ func (l *lbCoreFFI) SyncAll(fn func(SyncProgress)) error {
 	return newErrorFromFFI(e)
 }
 
-func (l *lbCoreFFI) ShareFile(id, uname string, mode ShareMode) error {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
+func (l *lbCoreFFI) ShareFile(id uuid.UUID, uname string, mode ShareMode) error {
 	cUname := C.CString(uname)
 	defer C.free(unsafe.Pointer(cUname))
 	cMode := C.LB_SHARE_MODE_READ
 	if mode == ShareModeWrite {
 		cMode = C.LB_SHARE_MODE_WRITE
 	}
-	e := C.lb_share_file(l.ref, cID, cUname, uint32(cMode))
+	e := C.lb_share_file(l.ref, cFileID(id), cUname, uint32(cMode))
 	defer C.lb_error_free(e)
 	return newErrorFromFFI(e)
 }
@@ -354,10 +326,8 @@ func (l *lbCoreFFI) GetPendingShares() ([]File, error) {
 	return ffiFileListResultToGo(r)
 }
 
-func (l *lbCoreFFI) DeletePendingShare(id string) error {
-	cID := C.CString(id)
-	defer C.free(unsafe.Pointer(cID))
-	e := C.lb_delete_pending_share(l.ref, cID)
+func (l *lbCoreFFI) DeletePendingShare(id uuid.UUID) error {
+	e := C.lb_delete_pending_share(l.ref, cFileID(id))
 	defer C.lb_error_free(e)
 	return newErrorFromFFI(e)
 }
@@ -441,6 +411,22 @@ func newErrorFromFFI(e C.LbError) error {
 	}
 }
 
+func cFileID(v uuid.UUID) (r C.LbFileId) {
+	var i C.size_t
+	for i = 0; i < 16; i++ {
+		r.data[i] = C.uint8_t(v[i])
+	}
+	return
+}
+
+func goFileID(v [16]C.uint8_t) (r uuid.UUID) {
+	var i C.size_t
+	for i = 0; i < 16; i++ {
+		r[i] = byte(v[i])
+	}
+	return
+}
+
 func newFileFromFFI(f *C.LbFile) File {
 	shares := make([]Share, int(f.shares.count))
 	var i C.size_t
@@ -459,16 +445,16 @@ func newFileFromFFI(f *C.LbFile) File {
 	case f.typ.tag == C.LB_FILE_TYPE_TAG_FOLDER:
 		ft = FileTypeFolder{}
 	case f.typ.tag == C.LB_FILE_TYPE_TAG_LINK:
-		target := [16]byte{}
+		target := uuid.UUID{}
 		var i C.size_t
 		for i = 0; i < 16; i++ {
 			target[i] = byte(f.typ.link_target[i])
 		}
-		ft = FileTypeLink{Target: uuid.UUID(target)}
+		ft = FileTypeLink{Target: target}
 	}
 	return File{
-		ID:        C.GoString(f.id),
-		Parent:    C.GoString(f.parent),
+		ID:        goFileID(f.id),
+		Parent:    goFileID(f.parent),
 		Name:      C.GoString(f.name),
 		Type:      ft,
 		Lastmod:   time.UnixMilli(int64(f.lastmod)),
