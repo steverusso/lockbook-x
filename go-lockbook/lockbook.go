@@ -15,25 +15,25 @@ type Core interface {
 	ImportAccount(acctStr string) (Account, error)
 	ExportAccount() (string, error)
 
-	FileByID(id uuid.UUID) (File, error)
+	FileByID(id FileID) (File, error)
 	FileByPath(lbPath string) (File, error)
 	GetRoot() (File, error)
-	GetChildren(id uuid.UUID) ([]File, error)
-	GetAndGetChildrenRecursively(id uuid.UUID) ([]File, error)
+	GetChildren(id FileID) ([]File, error)
+	GetAndGetChildrenRecursively(id FileID) ([]File, error)
 	ListMetadatas() ([]File, error)
-	PathByID(id uuid.UUID) (string, error)
+	PathByID(id FileID) (string, error)
 
-	ReadDocument(id uuid.UUID) ([]byte, error)
-	WriteDocument(id uuid.UUID, data []byte) error
+	ReadDocument(id FileID) ([]byte, error)
+	WriteDocument(id FileID, data []byte) error
 
-	CreateFile(name string, parentID uuid.UUID, typ FileType) (File, error)
+	CreateFile(name string, parentID FileID, typ FileType) (File, error)
 	CreateFileAtPath(lbPath string) (File, error)
-	DeleteFile(id uuid.UUID) error
-	RenameFile(id uuid.UUID, newName string) error
-	MoveFile(srcID, destID uuid.UUID) error
+	DeleteFile(id FileID) error
+	RenameFile(id FileID, newName string) error
+	MoveFile(srcID, destID FileID) error
 
-	ExportFile(id uuid.UUID, dest string, fn func(ImportExportFileInfo)) error
-	ExportDrawing(id uuid.UUID, imgFmt ImageFormat) ([]byte, error)
+	ExportFile(id FileID, dest string, fn func(ImportExportFileInfo)) error
+	ExportDrawing(id FileID, imgFmt ImageFormat) ([]byte, error)
 
 	GetLastSyncedHumanString() (string, error)
 	GetUsage() (UsageMetrics, error)
@@ -41,9 +41,9 @@ type Core interface {
 	CalculateWork() (WorkCalculated, error)
 	SyncAll(fn func(SyncProgress)) error
 
-	ShareFile(id uuid.UUID, uname string, mode ShareMode) error
+	ShareFile(id FileID, uname string, mode ShareMode) error
 	GetPendingShares() ([]File, error)
-	DeletePendingShare(id uuid.UUID) error
+	DeletePendingShare(id FileID) error
 
 	GetSubscriptionInfo() (SubscriptionInfo, error)
 	UpgradeViaStripe(card *CreditCard) error
@@ -108,9 +108,11 @@ type Account struct {
 	APIURL   string
 }
 
+type FileID = uuid.UUID
+
 type File struct {
-	ID        uuid.UUID
-	Parent    uuid.UUID
+	ID        FileID
+	Parent    FileID
 	Name      string
 	Type      FileType
 	Lastmod   time.Time
@@ -132,7 +134,7 @@ type (
 
 	FileTypeDocument struct{}
 	FileTypeFolder   struct{}
-	FileTypeLink     struct{ Target uuid.UUID }
+	FileTypeLink     struct{ Target FileID }
 )
 
 func (_ FileTypeDocument) implsFileType() {}

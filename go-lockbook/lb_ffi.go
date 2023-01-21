@@ -15,8 +15,6 @@ import (
 	"runtime/cgo"
 	"time"
 	"unsafe"
-
-	"github.com/gofrs/uuid"
 )
 
 type lbCoreFFI struct {
@@ -65,7 +63,7 @@ func (l *lbCoreFFI) ExportAccount() (string, error) {
 	return ffiStringResultToGo(r)
 }
 
-func (l *lbCoreFFI) FileByID(id uuid.UUID) (File, error) {
+func (l *lbCoreFFI) FileByID(id FileID) (File, error) {
 	r := C.lb_get_file_by_id(l.ref, cFileID(id))
 	defer C.lb_file_result_free(r)
 	return ffiFileResultToGo(r)
@@ -79,7 +77,7 @@ func (l *lbCoreFFI) FileByPath(lbPath string) (File, error) {
 	return ffiFileResultToGo(r)
 }
 
-func (l *lbCoreFFI) PathByID(id uuid.UUID) (string, error) {
+func (l *lbCoreFFI) PathByID(id FileID) (string, error) {
 	r := C.lb_get_path_by_id(l.ref, cFileID(id))
 	defer C.lb_string_result_free(r)
 	return ffiStringResultToGo(r)
@@ -91,13 +89,13 @@ func (l *lbCoreFFI) GetRoot() (File, error) {
 	return ffiFileResultToGo(r)
 }
 
-func (l *lbCoreFFI) GetChildren(id uuid.UUID) ([]File, error) {
+func (l *lbCoreFFI) GetChildren(id FileID) ([]File, error) {
 	r := C.lb_get_children(l.ref, cFileID(id))
 	defer C.lb_file_list_result_free(r)
 	return ffiFileListResultToGo(r)
 }
 
-func (l *lbCoreFFI) GetAndGetChildrenRecursively(id uuid.UUID) ([]File, error) {
+func (l *lbCoreFFI) GetAndGetChildrenRecursively(id FileID) ([]File, error) {
 	r := C.lb_get_and_get_children_recursively(l.ref, cFileID(id))
 	defer C.lb_file_list_result_free(r)
 	return ffiFileListResultToGo(r)
@@ -109,13 +107,13 @@ func (l *lbCoreFFI) ListMetadatas() ([]File, error) {
 	return ffiFileListResultToGo(r)
 }
 
-func (l *lbCoreFFI) ReadDocument(id uuid.UUID) ([]byte, error) {
+func (l *lbCoreFFI) ReadDocument(id FileID) ([]byte, error) {
 	r := C.lb_read_document(l.ref, cFileID(id))
 	defer C.lb_bytes_result_free(r)
 	return ffiBytesResultToGo(r)
 }
 
-func (l *lbCoreFFI) WriteDocument(id uuid.UUID, data []byte) error {
+func (l *lbCoreFFI) WriteDocument(id FileID, data []byte) error {
 	cData := C.CBytes(data)
 	defer C.free(unsafe.Pointer(cData))
 	e := C.lb_write_document(l.ref, cFileID(id), (*C.uchar)(cData), C.int(len(data)))
@@ -123,7 +121,7 @@ func (l *lbCoreFFI) WriteDocument(id uuid.UUID, data []byte) error {
 	return newErrorFromFFI(e)
 }
 
-func (l *lbCoreFFI) CreateFile(name string, parentID uuid.UUID, typ FileType) (File, error) {
+func (l *lbCoreFFI) CreateFile(name string, parentID FileID, typ FileType) (File, error) {
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
 
@@ -152,13 +150,13 @@ func (l *lbCoreFFI) CreateFileAtPath(lbPath string) (File, error) {
 	return ffiFileResultToGo(r)
 }
 
-func (l *lbCoreFFI) DeleteFile(id uuid.UUID) error {
+func (l *lbCoreFFI) DeleteFile(id FileID) error {
 	e := C.lb_delete_file(l.ref, cFileID(id))
 	defer C.lb_error_free(e)
 	return newErrorFromFFI(e)
 }
 
-func (l *lbCoreFFI) RenameFile(id uuid.UUID, newName string) error {
+func (l *lbCoreFFI) RenameFile(id FileID, newName string) error {
 	cNewName := C.CString(newName)
 	defer C.free(unsafe.Pointer(cNewName))
 	e := C.lb_rename_file(l.ref, cFileID(id), cNewName)
@@ -166,7 +164,7 @@ func (l *lbCoreFFI) RenameFile(id uuid.UUID, newName string) error {
 	return newErrorFromFFI(e)
 }
 
-func (l *lbCoreFFI) MoveFile(srcID, destID uuid.UUID) error {
+func (l *lbCoreFFI) MoveFile(srcID, destID FileID) error {
 	e := C.lb_move_file(l.ref, cFileID(srcID), cFileID(destID))
 	defer C.lb_error_free(e)
 	return newErrorFromFFI(e)
@@ -179,7 +177,7 @@ func go_imex_callback(info C.LbImexFileInfo, handlePtr unsafe.Pointer) {
 	fn(info)
 }
 
-func (l *lbCoreFFI) ExportFile(id uuid.UUID, dest string, fn func(ImportExportFileInfo)) error {
+func (l *lbCoreFFI) ExportFile(id FileID, dest string, fn func(ImportExportFileInfo)) error {
 	handle := cgo.NewHandle(func(cInfo C.LbImexFileInfo) {
 		defer C.lb_imex_file_info_free(cInfo)
 		if fn == nil {
@@ -201,7 +199,7 @@ func (l *lbCoreFFI) ExportFile(id uuid.UUID, dest string, fn func(ImportExportFi
 	return newErrorFromFFI(e)
 }
 
-func (l *lbCoreFFI) ExportDrawing(id uuid.UUID, imgFmt ImageFormat) ([]byte, error) {
+func (l *lbCoreFFI) ExportDrawing(id FileID, imgFmt ImageFormat) ([]byte, error) {
 	r := C.lb_export_drawing(l.ref, cFileID(id), C.uchar(imgFmt))
 	defer C.lb_bytes_result_free(r)
 	return ffiBytesResultToGo(r)
@@ -308,7 +306,7 @@ func (l *lbCoreFFI) SyncAll(fn func(SyncProgress)) error {
 	return newErrorFromFFI(e)
 }
 
-func (l *lbCoreFFI) ShareFile(id uuid.UUID, uname string, mode ShareMode) error {
+func (l *lbCoreFFI) ShareFile(id FileID, uname string, mode ShareMode) error {
 	cUname := C.CString(uname)
 	defer C.free(unsafe.Pointer(cUname))
 	cMode := C.LB_SHARE_MODE_READ
@@ -326,7 +324,7 @@ func (l *lbCoreFFI) GetPendingShares() ([]File, error) {
 	return ffiFileListResultToGo(r)
 }
 
-func (l *lbCoreFFI) DeletePendingShare(id uuid.UUID) error {
+func (l *lbCoreFFI) DeletePendingShare(id FileID) error {
 	e := C.lb_delete_pending_share(l.ref, cFileID(id))
 	defer C.lb_error_free(e)
 	return newErrorFromFFI(e)
@@ -411,7 +409,7 @@ func newErrorFromFFI(e C.LbError) error {
 	}
 }
 
-func cFileID(v uuid.UUID) (r C.LbFileId) {
+func cFileID(v FileID) (r C.LbFileId) {
 	var i C.size_t
 	for i = 0; i < 16; i++ {
 		r.data[i] = C.uint8_t(v[i])
@@ -419,7 +417,7 @@ func cFileID(v uuid.UUID) (r C.LbFileId) {
 	return
 }
 
-func goFileID(v [16]C.uint8_t) (r uuid.UUID) {
+func goFileID(v [16]C.uint8_t) (r FileID) {
 	var i C.size_t
 	for i = 0; i < 16; i++ {
 		r[i] = byte(v[i])
@@ -445,7 +443,7 @@ func newFileFromFFI(f *C.LbFile) File {
 	case f.typ.tag == C.LB_FILE_TYPE_TAG_FOLDER:
 		ft = FileTypeFolder{}
 	case f.typ.tag == C.LB_FILE_TYPE_TAG_LINK:
-		target := uuid.UUID{}
+		target := FileID{}
 		var i C.size_t
 		for i = 0; i < 16; i++ {
 			target[i] = byte(f.typ.link_target[i])
