@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/gofrs/uuid"
 	lb "github.com/steverusso/lockbook-x/go-lockbook"
 )
 
@@ -51,17 +53,17 @@ func acceptShare(core lb.Core, id, dest, newName string) error {
 	if err != nil {
 		return err
 	}
-	parentID := ""
-	// If the destination is an ID, it must be of an existing directory.
-	if lb.IsUUID(dest) {
-		f, err := core.FileByID(dest)
+	parentID := lb.FileID{}
+	// If the destination is a valid UUID, it must be of an existing directory.
+	if destID, err := uuid.FromString(dest); err == nil {
+		f, err := core.FileByID(destID)
 		if err != nil {
-			return fmt.Errorf("file by id %q: %w", dest, err)
+			return fmt.Errorf("file by id %q: %w", destID, err)
 		}
 		if !f.IsDir() {
-			return fmt.Errorf("destination id %q isn't a folder", dest)
+			return fmt.Errorf("destination id %q isn't a folder", destID)
 		}
-		parentID = dest
+		parentID = destID
 	} else {
 		// If the destination path exists, it must be a directory. The link will be
 		// dropped in it.
@@ -126,7 +128,7 @@ func deletePendingShare(core lb.Core, id string) error {
 func getOnePendingShareMatch(shares []lb.File, id string) (lb.File, error) {
 	matches := []lb.File{}
 	for _, f := range shares {
-		if strings.HasPrefix(f.ID, id) {
+		if strings.HasPrefix(f.ID.String(), id) {
 			matches = append(matches, f)
 		}
 	}
@@ -148,7 +150,7 @@ func getOnePendingShareMatch(shares []lb.File, id string) (lb.File, error) {
 }
 
 type shareInfo struct {
-	id   string
+	id   lb.FileID
 	from string
 	name string
 	mode string
@@ -177,7 +179,7 @@ func filesToShareInfos(files []lb.File) []shareInfo {
 		if a.name != b.name {
 			return a.name < b.name
 		}
-		return a.id < b.id
+		return bytes.Compare(a.id[:], b.id[:]) < 0
 	})
 	return infos
 }

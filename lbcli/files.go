@@ -88,7 +88,7 @@ func moveFile(core lb.Core, srcTarget, destTarget string) error {
 }
 
 func deleteFiles(core lb.Core, targets []string, isForce bool) error {
-	ids := make([]string, len(targets))
+	ids := make([]lb.FileID, len(targets))
 	for i, t := range targets {
 		id, err := idFromSomething(core, t)
 		if err != nil {
@@ -96,14 +96,14 @@ func deleteFiles(core lb.Core, targets []string, isForce bool) error {
 		}
 		ids[i] = id
 	}
-	for i, id := range targets {
+	for i, id := range ids {
 		f, err := core.FileByID(id)
 		if err != nil {
 			return fmt.Errorf("file by id %q: %w", id, err)
 		}
 		if !isForce {
 			phrase := fmt.Sprintf("delete %q", id)
-			if t := targets[i]; t != id {
+			if t := targets[i]; t != id.String() {
 				phrase += " (target: " + t + ")"
 			}
 			if f.IsDir() {

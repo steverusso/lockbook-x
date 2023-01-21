@@ -42,8 +42,8 @@ func printFile(f lb.File, myName string) {
 	}
 	data := [][2]string{
 		{"name", f.Name},
-		{"id", f.ID},
-		{"parent", f.Parent},
+		{"id", f.ID.String()},
+		{"parent", f.Parent.String()},
 		{"type", strings.ToLower(lb.FileTypeString(f.Type))},
 		{"lastmod", fmt.Sprintf("%v", f.Lastmod)},
 		{"lastmod_by", f.LastmodBy},
