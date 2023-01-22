@@ -55,7 +55,7 @@ func acceptShare(core lb.Core, id, dest, newName string) error {
 	}
 	parentID := lb.FileID{}
 	// If the destination is a valid UUID, it must be of an existing directory.
-	if destID, err := uuid.FromString(dest); err == nil {
+	if destID := uuid.FromStringOrNil(dest); !destID.IsNil() {
 		f, err := core.FileByID(destID)
 		if err != nil {
 			return fmt.Errorf("file by id %q: %w", destID, err)
@@ -135,7 +135,7 @@ func getOnePendingShareMatch(shares []lb.File, id string) (lb.File, error) {
 	n := len(matches)
 	if len(matches) == 0 {
 		desc := ""
-		if !lb.IsUUID(id) {
+		if t := uuid.FromStringOrNil(id); !t.IsNil() {
 			desc = " prefix"
 		}
 		return lb.File{}, fmt.Errorf("no pending share found with id%s %s", desc, id)

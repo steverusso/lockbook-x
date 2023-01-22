@@ -28,12 +28,6 @@ macro_rules! core {
 
 pub(crate) use core;
 
-/// # Safety
-#[no_mangle]
-pub unsafe extern "C" fn is_uuid(s: *const c_char) -> bool {
-    Uuid::parse_str(rstr(s)).is_ok()
-}
-
 #[no_mangle]
 pub extern "C" fn lb_default_api_location() -> *const c_char {
     static C_DEFAULT_API_LOCATION: &str = "https://api.prod.lockbook.net\0";

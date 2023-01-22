@@ -21,8 +21,8 @@ func maybeFileByPath(core lb.Core, p string) (lb.File, bool, error) {
 }
 
 func idFromSomething(core lb.Core, v string) (uuid.UUID, error) {
-	if lb.IsUUID(v) {
-		return uuid.FromStringOrNil(v), nil
+	if id := uuid.FromStringOrNil(v); !id.IsNil() {
+		return id, nil
 	}
 	f, err := core.FileByPath(v)
 	if err == nil {

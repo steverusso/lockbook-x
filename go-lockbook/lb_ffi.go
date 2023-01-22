@@ -393,12 +393,6 @@ func DefaultAPILocation() string {
 	return C.GoString(C.lb_default_api_location())
 }
 
-func IsUUID(s string) bool {
-	cStr := C.CString(s)
-	defer C.free(unsafe.Pointer(cStr))
-	return bool(C.is_uuid(cStr))
-}
-
 func newErrorFromFFI(e C.LbError) error {
 	if e.code == 0 {
 		return nil
