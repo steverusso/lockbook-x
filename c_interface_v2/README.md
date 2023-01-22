@@ -11,7 +11,9 @@ This differs from the current lockbook c_interface (v1) in a few key ways:
   members and constants with `LB_`.
 * no lazy static state: `init` returns an instance of `Core` as a raw pointer which should
   be the first argument to any core function call.
-* incorrect UUID strings will return unexpected errors instead of crashing.
+* [UUIDs are passed as 16 byte array values over
+  FFI](https://github.com/steverusso/lockbook-x/pull/8) instead of as strings
+  that panic if they can't be parsed.
 
 ## Missing endpoints
 
