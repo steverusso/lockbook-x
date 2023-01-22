@@ -1,11 +1,12 @@
 #[test]
 fn ffi_api_location_matches() {
-    unsafe {
-        let ffi_val = std::ffi::CStr::from_ptr(crate::lb_default_api_location())
+    assert_eq!(
+        lockbook_core::DEFAULT_API_LOCATION,
+        std::ffi::CStr::from_bytes_with_nul(crate::C_DEFAULT_API_LOCATION)
+            .unwrap()
             .to_str()
-            .expect("c -> rust str");
-        assert_eq!(lockbook_core::DEFAULT_API_LOCATION, ffi_val)
-    }
+            .unwrap()
+    )
 }
 
 #[test]

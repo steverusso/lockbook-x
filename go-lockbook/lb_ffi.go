@@ -390,7 +390,7 @@ func (l *lbCoreFFI) Validate() ([]string, error) {
 }
 
 func DefaultAPILocation() string {
-	return C.GoString(C.lb_default_api_location())
+	return C.GoString((*C.char)(unsafe.Pointer(&C.C_DEFAULT_API_LOCATION[0])))
 }
 
 func newErrorFromFFI(e C.LbError) error {

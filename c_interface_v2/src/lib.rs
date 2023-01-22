@@ -29,11 +29,7 @@ macro_rules! core {
 pub(crate) use core;
 
 #[no_mangle]
-pub extern "C" fn lb_default_api_location() -> *const c_char {
-    static C_DEFAULT_API_LOCATION: &str = "https://api.prod.lockbook.net\0";
-
-    C_DEFAULT_API_LOCATION.as_ptr() as *const c_char
-}
+pub static C_DEFAULT_API_LOCATION: &[u8; 30] = b"https://api.prod.lockbook.net\0";
 
 #[repr(C)]
 pub struct LbError {
