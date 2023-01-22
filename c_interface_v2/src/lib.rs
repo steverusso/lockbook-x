@@ -20,40 +20,13 @@ unsafe fn rstr<'a>(s: *const c_char) -> &'a str {
     CStr::from_ptr(s).to_str().expect("*const char -> &str")
 }
 
-unsafe fn parse_c_uuid(c_id: *const c_char) -> Result<Uuid, LbError> {
-    let s = rstr(c_id);
-    s.parse().map_err(|_| LbError {
-        code: LbErrorCode::Unexpected,
-        msg: cstr(format!("unable to parse uuid '{}'", s)),
-    })
-}
-
 macro_rules! core {
     ($ptr:ident) => {
         &*($ptr as *mut Core)
     };
 }
 
-macro_rules! uuid_or_return {
-    ($id:expr) => {
-        match parse_c_uuid($id) {
-            Ok(id) => id,
-            Err(err) => return err,
-        }
-    };
-    ($id:expr, $result:ident) => {
-        match parse_c_uuid($id) {
-            Ok(id) => id,
-            Err(err) => {
-                $result.err = err;
-                return $result;
-            }
-        }
-    };
-}
-
 pub(crate) use core;
-pub(crate) use uuid_or_return;
 
 /// # Safety
 #[no_mangle]

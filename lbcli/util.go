@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gofrs/uuid"
 	lb "github.com/steverusso/lockbook-x/go-lockbook"
 )
 
@@ -19,31 +20,31 @@ func maybeFileByPath(core lb.Core, p string) (lb.File, bool, error) {
 	return f, true, nil
 }
 
-func idFromSomething(core lb.Core, v string) (string, error) {
+func idFromSomething(core lb.Core, v string) (uuid.UUID, error) {
 	if lb.IsUUID(v) {
-		return v, nil
+		return uuid.FromStringOrNil(v), nil
 	}
 	f, err := core.FileByPath(v)
 	if err == nil {
 		return f.ID, nil
 	}
 	if err, ok := err.(*lb.Error); ok && err.Code != lb.CodeFileNotFound {
-		return "", fmt.Errorf("trying to get a file by path: %w", err)
+		return uuid.Nil, fmt.Errorf("trying to get a file by path: %w", err)
 	}
 	// Not a full UUID and not a path, so that leaves UUID prefix.
 	files, err := core.ListMetadatas()
 	if err != nil {
-		return "", fmt.Errorf("listing metadatas to check ids: %w", err)
+		return uuid.Nil, fmt.Errorf("listing metadatas to check ids: %w", err)
 	}
 	possibs := make([]lb.File, 0, 5)
 	for i := range files {
-		if strings.HasPrefix(files[i].ID, v) {
+		if strings.HasPrefix(files[i].ID.String(), v) {
 			possibs = append(possibs, files[i])
 		}
 	}
 	n := len(possibs)
 	if n == 0 {
-		return "", fmt.Errorf("value %q is not a path, uuid, or uuid prefix", v)
+		return uuid.Nil, fmt.Errorf("value %q is not a path, uuid, or uuid prefix", v)
 	}
 	if n == 1 {
 		return possibs[0].ID, nil
@@ -57,5 +58,5 @@ func idFromSomething(core lb.Core, v string) (string, error) {
 		}
 		errMsg += fmt.Sprintf("  %s  %s\n", f.ID, pathOrErr)
 	}
-	return "", errors.New(errMsg)
+	return uuid.Nil, errors.New(errMsg)
 }

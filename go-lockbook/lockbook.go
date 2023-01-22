@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/gofrs/uuid"
 )
 
 type Core interface {
@@ -13,25 +15,25 @@ type Core interface {
 	ImportAccount(acctStr string) (Account, error)
 	ExportAccount() (string, error)
 
-	FileByID(id string) (File, error)
+	FileByID(id FileID) (File, error)
 	FileByPath(lbPath string) (File, error)
 	GetRoot() (File, error)
-	GetChildren(id string) ([]File, error)
-	GetAndGetChildrenRecursively(id string) ([]File, error)
+	GetChildren(id FileID) ([]File, error)
+	GetAndGetChildrenRecursively(id FileID) ([]File, error)
 	ListMetadatas() ([]File, error)
-	PathByID(id string) (string, error)
+	PathByID(id FileID) (string, error)
 
-	ReadDocument(id string) ([]byte, error)
-	WriteDocument(id string, data []byte) error
+	ReadDocument(id FileID) ([]byte, error)
+	WriteDocument(id FileID, data []byte) error
 
-	CreateFile(name, parentID string, typ FileType) (File, error)
+	CreateFile(name string, parentID FileID, typ FileType) (File, error)
 	CreateFileAtPath(lbPath string) (File, error)
-	DeleteFile(id string) error
-	RenameFile(id string, newName string) error
-	MoveFile(srcID, destID string) error
+	DeleteFile(id FileID) error
+	RenameFile(id FileID, newName string) error
+	MoveFile(srcID, destID FileID) error
 
-	ExportFile(id, dest string, fn func(ImportExportFileInfo)) error
-	ExportDrawing(id string, imgFmt ImageFormat) ([]byte, error)
+	ExportFile(id FileID, dest string, fn func(ImportExportFileInfo)) error
+	ExportDrawing(id FileID, imgFmt ImageFormat) ([]byte, error)
 
 	GetLastSyncedHumanString() (string, error)
 	GetUsage() (UsageMetrics, error)
@@ -39,9 +41,9 @@ type Core interface {
 	CalculateWork() (WorkCalculated, error)
 	SyncAll(fn func(SyncProgress)) error
 
-	ShareFile(id, uname string, mode ShareMode) error
+	ShareFile(id FileID, uname string, mode ShareMode) error
 	GetPendingShares() ([]File, error)
-	DeletePendingShare(id string) error
+	DeletePendingShare(id FileID) error
 
 	GetSubscriptionInfo() (SubscriptionInfo, error)
 	UpgradeViaStripe(card *CreditCard) error
@@ -106,9 +108,11 @@ type Account struct {
 	APIURL   string
 }
 
+type FileID = uuid.UUID
+
 type File struct {
-	ID        string
-	Parent    string
+	ID        FileID
+	Parent    FileID
 	Name      string
 	Type      FileType
 	Lastmod   time.Time
@@ -130,7 +134,7 @@ type (
 
 	FileTypeDocument struct{}
 	FileTypeFolder   struct{}
-	FileTypeLink     struct{ Target string }
+	FileTypeLink     struct{ Target FileID }
 )
 
 func (_ FileTypeDocument) implsFileType() {}
@@ -144,7 +148,7 @@ func FileTypeString(t FileType) string {
 	case FileTypeFolder:
 		return "Folder"
 	case FileTypeLink:
-		return "Link('" + t.Target + "')"
+		return "Link('" + t.Target.String() + "')"
 	default:
 		return fmt.Sprintf("FileType(%v)", t)
 	}

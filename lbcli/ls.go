@@ -31,7 +31,7 @@ type lsConfig struct {
 }
 
 type fileNode struct {
-	id         string
+	id         lb.FileID
 	dirName    string
 	name       string
 	isDir      bool
@@ -42,7 +42,7 @@ type fileNode struct {
 
 func (node *fileNode) text(cfg *lsConfig) (s string) {
 	if !cfg.short {
-		s += fmt.Sprintf("%-*s  ", cfg.idWidth, node.id[:cfg.idWidth])
+		s += fmt.Sprintf("%-*s  ", cfg.idWidth, node.id.String()[:cfg.idWidth])
 	}
 	nameOrPath := node.name
 	if cfg.paths {
@@ -71,7 +71,7 @@ func (node *fileNode) printOut(cfg *lsConfig) {
 	}
 }
 
-func getChildren(core lb.Core, files []lb.File, parent string, cfg *lsConfig) ([]fileNode, error) {
+func getChildren(core lb.Core, files []lb.File, parent lb.FileID, cfg *lsConfig) ([]fileNode, error) {
 	lockbook.SortFiles(files)
 	children := []fileNode{}
 	for i := range files {
