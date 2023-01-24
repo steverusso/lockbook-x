@@ -181,13 +181,10 @@ func (s ShareMode) String() string {
 func SortFiles(files []File) {
 	sort.SliceStable(files, func(i, j int) bool {
 		a, b := files[i], files[j]
-		if a.IsDir() && !b.IsDir() {
-			return true
+		if a.IsDir() == b.IsDir() {
+			return a.Name < b.Name
 		}
-		if !a.IsDir() && b.IsDir() {
-			return false
-		}
-		return a.Name < b.Name
+		return a.IsDir()
 	})
 }
 
