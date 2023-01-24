@@ -28,7 +28,7 @@ func initLbCoreFFI(fpath string) (*lbCoreFFI, error) {
 	defer C.lb_error_free(r.err)
 
 	if r.err.code != 0 {
-		return nil, newErrorFromFFI(r.err)
+		return nil, newErrorFromC(r.err)
 	}
 	return &lbCoreFFI{ref: r.core}, nil
 }
@@ -36,7 +36,7 @@ func initLbCoreFFI(fpath string) (*lbCoreFFI, error) {
 func (l *lbCoreFFI) GetAccount() (Account, error) {
 	r := C.lb_get_account(l.ref)
 	defer C.lb_account_result_free(r)
-	return ffiAccountResultToGo(r)
+	return goAccountResult(r)
 }
 
 func (l *lbCoreFFI) CreateAccount(uname string, welcome bool) (Account, error) {
@@ -46,7 +46,7 @@ func (l *lbCoreFFI) CreateAccount(uname string, welcome bool) (Account, error) {
 	defer C.free(unsafe.Pointer(cAPIURL))
 	r := C.lb_create_account(l.ref, cUsername, cAPIURL, C.bool(welcome))
 	defer C.lb_account_result_free(r)
-	return ffiAccountResultToGo(r)
+	return goAccountResult(r)
 }
 
 func (l *lbCoreFFI) ImportAccount(acctStr string) (Account, error) {
@@ -54,19 +54,19 @@ func (l *lbCoreFFI) ImportAccount(acctStr string) (Account, error) {
 	defer C.free(unsafe.Pointer(cAcctStr))
 	r := C.lb_import_account(l.ref, cAcctStr)
 	defer C.lb_account_result_free(r)
-	return ffiAccountResultToGo(r)
+	return goAccountResult(r)
 }
 
 func (l *lbCoreFFI) ExportAccount() (string, error) {
 	r := C.lb_export_account(l.ref)
 	defer C.lb_string_result_free(r)
-	return ffiStringResultToGo(r)
+	return goStringResult(r)
 }
 
 func (l *lbCoreFFI) FileByID(id FileID) (File, error) {
 	r := C.lb_get_file_by_id(l.ref, cFileID(id))
 	defer C.lb_file_result_free(r)
-	return ffiFileResultToGo(r)
+	return goFileResult(r)
 }
 
 func (l *lbCoreFFI) FileByPath(lbPath string) (File, error) {
@@ -74,43 +74,43 @@ func (l *lbCoreFFI) FileByPath(lbPath string) (File, error) {
 	defer C.free(unsafe.Pointer(cPath))
 	r := C.lb_get_file_by_path(l.ref, cPath)
 	defer C.lb_file_result_free(r)
-	return ffiFileResultToGo(r)
+	return goFileResult(r)
 }
 
 func (l *lbCoreFFI) PathByID(id FileID) (string, error) {
 	r := C.lb_get_path_by_id(l.ref, cFileID(id))
 	defer C.lb_string_result_free(r)
-	return ffiStringResultToGo(r)
+	return goStringResult(r)
 }
 
 func (l *lbCoreFFI) GetRoot() (File, error) {
 	r := C.lb_get_root(l.ref)
 	defer C.lb_file_result_free(r)
-	return ffiFileResultToGo(r)
+	return goFileResult(r)
 }
 
 func (l *lbCoreFFI) GetChildren(id FileID) ([]File, error) {
 	r := C.lb_get_children(l.ref, cFileID(id))
 	defer C.lb_file_list_result_free(r)
-	return ffiFileListResultToGo(r)
+	return goFileListResult(r)
 }
 
 func (l *lbCoreFFI) GetAndGetChildrenRecursively(id FileID) ([]File, error) {
 	r := C.lb_get_and_get_children_recursively(l.ref, cFileID(id))
 	defer C.lb_file_list_result_free(r)
-	return ffiFileListResultToGo(r)
+	return goFileListResult(r)
 }
 
 func (l *lbCoreFFI) ListMetadatas() ([]File, error) {
 	r := C.lb_list_metadatas(l.ref)
 	defer C.lb_file_list_result_free(r)
-	return ffiFileListResultToGo(r)
+	return goFileListResult(r)
 }
 
 func (l *lbCoreFFI) ReadDocument(id FileID) ([]byte, error) {
 	r := C.lb_read_document(l.ref, cFileID(id))
 	defer C.lb_bytes_result_free(r)
-	return ffiBytesResultToGo(r)
+	return goBytesResult(r)
 }
 
 func (l *lbCoreFFI) WriteDocument(id FileID, data []byte) error {
@@ -118,7 +118,7 @@ func (l *lbCoreFFI) WriteDocument(id FileID, data []byte) error {
 	defer C.free(unsafe.Pointer(cData))
 	e := C.lb_write_document(l.ref, cFileID(id), (*C.uchar)(cData), C.int(len(data)))
 	defer C.lb_error_free(e)
-	return newErrorFromFFI(e)
+	return newErrorFromC(e)
 }
 
 func (l *lbCoreFFI) CreateFile(name string, parentID FileID, typ FileType) (File, error) {
@@ -139,7 +139,7 @@ func (l *lbCoreFFI) CreateFile(name string, parentID FileID, typ FileType) (File
 
 	r := C.lb_create_file(l.ref, cName, cFileID(parentID), cTyp)
 	defer C.lb_file_result_free(r)
-	return ffiFileResultToGo(r)
+	return goFileResult(r)
 }
 
 func (l *lbCoreFFI) CreateFileAtPath(lbPath string) (File, error) {
@@ -147,13 +147,13 @@ func (l *lbCoreFFI) CreateFileAtPath(lbPath string) (File, error) {
 	defer C.free(unsafe.Pointer(cPath))
 	r := C.lb_create_file_at_path(l.ref, cPath)
 	defer C.lb_file_result_free(r)
-	return ffiFileResultToGo(r)
+	return goFileResult(r)
 }
 
 func (l *lbCoreFFI) DeleteFile(id FileID) error {
 	e := C.lb_delete_file(l.ref, cFileID(id))
 	defer C.lb_error_free(e)
-	return newErrorFromFFI(e)
+	return newErrorFromC(e)
 }
 
 func (l *lbCoreFFI) RenameFile(id FileID, newName string) error {
@@ -161,13 +161,13 @@ func (l *lbCoreFFI) RenameFile(id FileID, newName string) error {
 	defer C.free(unsafe.Pointer(cNewName))
 	e := C.lb_rename_file(l.ref, cFileID(id), cNewName)
 	defer C.lb_error_free(e)
-	return newErrorFromFFI(e)
+	return newErrorFromC(e)
 }
 
 func (l *lbCoreFFI) MoveFile(srcID, destID FileID) error {
 	e := C.lb_move_file(l.ref, cFileID(srcID), cFileID(destID))
 	defer C.lb_error_free(e)
-	return newErrorFromFFI(e)
+	return newErrorFromC(e)
 }
 
 //export go_imex_callback
@@ -196,19 +196,19 @@ func (l *lbCoreFFI) ExportFile(id FileID, dest string, fn func(ImportExportFileI
 	defer C.free(unsafe.Pointer(cDest))
 	e := C.lb_export_file(l.ref, cFileID(id), cDest, C.LbImexCallback(C.go_imex_callback), handlePtr)
 	defer C.lb_error_free(e)
-	return newErrorFromFFI(e)
+	return newErrorFromC(e)
 }
 
 func (l *lbCoreFFI) ExportDrawing(id FileID, imgFmt ImageFormat) ([]byte, error) {
 	r := C.lb_export_drawing(l.ref, cFileID(id), C.uchar(imgFmt))
 	defer C.lb_bytes_result_free(r)
-	return ffiBytesResultToGo(r)
+	return goBytesResult(r)
 }
 
 func (l *lbCoreFFI) GetLastSyncedHumanString() (string, error) {
 	r := C.lb_get_last_synced_human_string(l.ref)
 	defer C.lb_string_result_free(r)
-	return ffiStringResultToGo(r)
+	return goStringResult(r)
 }
 
 func (l *lbCoreFFI) GetUsage() (UsageMetrics, error) {
@@ -216,7 +216,7 @@ func (l *lbCoreFFI) GetUsage() (UsageMetrics, error) {
 	defer C.lb_usage_result_free(r)
 
 	if r.err.code != 0 {
-		return UsageMetrics{}, newErrorFromFFI(r.err)
+		return UsageMetrics{}, newErrorFromC(r.err)
 	}
 	fileUsages := make([]FileUsage, int(r.num_usages))
 	var i C.size_t
@@ -245,7 +245,7 @@ func (l *lbCoreFFI) GetUncompressedUsage() (UsageItemMetric, error) {
 	defer C.lb_unc_usage_result_free(r)
 
 	if r.err.code != 0 {
-		return UsageItemMetric{}, newErrorFromFFI(r.err)
+		return UsageItemMetric{}, newErrorFromC(r.err)
 	}
 	return UsageItemMetric{
 		Exact:    uint64(r.ok.exact),
@@ -258,7 +258,7 @@ func (l *lbCoreFFI) CalculateWork() (WorkCalculated, error) {
 	defer C.lb_calc_work_result_free(r)
 
 	if r.err.code != 0 {
-		return WorkCalculated{}, newErrorFromFFI(r.err)
+		return WorkCalculated{}, newErrorFromC(r.err)
 	}
 	workUnits := make([]WorkUnit, int(r.num_units))
 	var i C.size_t
@@ -266,7 +266,7 @@ func (l *lbCoreFFI) CalculateWork() (WorkCalculated, error) {
 		cUnit := C.lb_calc_work_result_index(r, i)
 		workUnits[i] = WorkUnit{
 			Type: WorkUnitType(cUnit.typ),
-			File: newFileFromFFI(&cUnit.file),
+			File: newFileFromC(&cUnit.file),
 		}
 	}
 	return WorkCalculated{
@@ -303,7 +303,7 @@ func (l *lbCoreFFI) SyncAll(fn func(SyncProgress)) error {
 	h := C.uintptr_t(handle)
 	e := C.lb_sync_all(l.ref, C.LbSyncProgressCallback(C.go_sync_callback), unsafe.Pointer(&h))
 	defer C.lb_error_free(e)
-	return newErrorFromFFI(e)
+	return newErrorFromC(e)
 }
 
 func (l *lbCoreFFI) ShareFile(id FileID, uname string, mode ShareMode) error {
@@ -315,19 +315,19 @@ func (l *lbCoreFFI) ShareFile(id FileID, uname string, mode ShareMode) error {
 	}
 	e := C.lb_share_file(l.ref, cFileID(id), cUname, uint32(cMode))
 	defer C.lb_error_free(e)
-	return newErrorFromFFI(e)
+	return newErrorFromC(e)
 }
 
 func (l *lbCoreFFI) GetPendingShares() ([]File, error) {
 	r := C.lb_get_pending_shares(l.ref)
 	defer C.lb_file_list_result_free(r)
-	return ffiFileListResultToGo(r)
+	return goFileListResult(r)
 }
 
 func (l *lbCoreFFI) DeletePendingShare(id FileID) error {
 	e := C.lb_delete_pending_share(l.ref, cFileID(id))
 	defer C.lb_error_free(e)
-	return newErrorFromFFI(e)
+	return newErrorFromC(e)
 }
 
 func (l *lbCoreFFI) GetSubscriptionInfo() (SubscriptionInfo, error) {
@@ -335,7 +335,7 @@ func (l *lbCoreFFI) GetSubscriptionInfo() (SubscriptionInfo, error) {
 	defer C.lb_sub_info_result_free(r)
 
 	if r.err.code != 0 {
-		return SubscriptionInfo{}, newErrorFromFFI(r.err)
+		return SubscriptionInfo{}, newErrorFromC(r.err)
 	}
 	info := SubscriptionInfo{}
 	if r.period_end != 0 {
@@ -357,7 +357,7 @@ func (l *lbCoreFFI) UpgradeViaStripe(card *CreditCard) error {
 	if card == nil {
 		e := C.lb_upgrade_account_stripe_old_card(l.ref)
 		defer C.lb_error_free(e)
-		return newErrorFromFFI(e)
+		return newErrorFromC(e)
 	}
 	cNumber := C.CString(card.Number)
 	defer C.free(unsafe.Pointer(cNumber))
@@ -365,20 +365,20 @@ func (l *lbCoreFFI) UpgradeViaStripe(card *CreditCard) error {
 	defer C.free(unsafe.Pointer(cCVC))
 	e := C.lb_upgrade_account_stripe_new_card(l.ref, cNumber, C.int(card.ExpiryYear), C.int(card.ExpiryMonth), cCVC)
 	defer C.lb_error_free(e)
-	return newErrorFromFFI(e)
+	return newErrorFromC(e)
 }
 
 func (l *lbCoreFFI) CancelSubscription() error {
 	e := C.lb_cancel_subscription(l.ref)
 	defer C.lb_error_free(e)
-	return newErrorFromFFI(e)
+	return newErrorFromC(e)
 }
 
 func (l *lbCoreFFI) Validate() ([]string, error) {
 	r := C.lb_validate(l.ref)
 	defer C.lb_validate_result_free(r)
 	if r.err.code != 0 {
-		return nil, newErrorFromFFI(r.err)
+		return nil, newErrorFromC(r.err)
 	}
 	warnings := make([]string, int(r.n_warnings))
 	var i C.size_t
@@ -393,7 +393,7 @@ func DefaultAPILocation() string {
 	return C.GoString((*C.char)(unsafe.Pointer(&C.C_DEFAULT_API_LOCATION[0])))
 }
 
-func newErrorFromFFI(e C.LbError) error {
+func newErrorFromC(e C.LbError) error {
 	if e.code == 0 {
 		return nil
 	}
@@ -419,7 +419,7 @@ func goFileID(v [16]C.uint8_t) (r FileID) {
 	return
 }
 
-func newFileFromFFI(f *C.LbFile) File {
+func newFileFromC(f *C.LbFile) File {
 	shares := make([]Share, int(f.shares.count))
 	var i C.size_t
 	for i = 0; i < f.shares.count; i++ {
@@ -455,9 +455,9 @@ func newFileFromFFI(f *C.LbFile) File {
 	}
 }
 
-func ffiAccountResultToGo(r C.LbAccountResult) (Account, error) {
+func goAccountResult(r C.LbAccountResult) (Account, error) {
 	if r.err.code != 0 {
-		return Account{}, newErrorFromFFI(r.err)
+		return Account{}, newErrorFromC(r.err)
 	}
 	return Account{
 		Username: C.GoString(r.ok.username),
@@ -465,36 +465,36 @@ func ffiAccountResultToGo(r C.LbAccountResult) (Account, error) {
 	}, nil
 }
 
-func ffiBytesResultToGo(r C.LbBytesResult) ([]byte, error) {
+func goBytesResult(r C.LbBytesResult) ([]byte, error) {
 	if r.err.code != 0 {
-		return nil, newErrorFromFFI(r.err)
+		return nil, newErrorFromC(r.err)
 	}
 	return C.GoBytes(unsafe.Pointer(r.bytes), C.int(r.count)), nil
 }
 
-func ffiFileResultToGo(r C.LbFileResult) (File, error) {
+func goFileResult(r C.LbFileResult) (File, error) {
 	if r.err.code != 0 {
-		return File{}, newErrorFromFFI(r.err)
+		return File{}, newErrorFromC(r.err)
 	}
-	return newFileFromFFI(&r.ok), nil
+	return newFileFromC(&r.ok), nil
 }
 
-func ffiFileListResultToGo(r C.LbFileListResult) ([]File, error) {
-	if err := newErrorFromFFI(r.err); err != nil {
+func goFileListResult(r C.LbFileListResult) ([]File, error) {
+	if err := newErrorFromC(r.err); err != nil {
 		return nil, err
 	}
 	files := make([]File, int(r.ok.count))
 	var i C.size_t
 	for i = 0; i < r.ok.count; i++ {
 		f := C.lb_file_list_index(r.ok, i)
-		files[i] = newFileFromFFI(f)
+		files[i] = newFileFromC(f)
 	}
 	return files, nil
 }
 
-func ffiStringResultToGo(r C.LbStringResult) (string, error) {
+func goStringResult(r C.LbStringResult) (string, error) {
 	if r.err.code != 0 {
-		return "", newErrorFromFFI(r.err)
+		return "", newErrorFromC(r.err)
 	}
 	return C.GoString(r.ok), nil
 }
