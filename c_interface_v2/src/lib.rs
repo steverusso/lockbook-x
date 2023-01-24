@@ -6,9 +6,7 @@ mod sync_and_usage;
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::ptr::null_mut;
 
-use lockbook_core::{
-    Config, Core, Error, File, FileType, Share, ShareMode, SupportedImageFormats, Uuid,
-};
+use lockbook_core::{Config, Core, Error};
 
 use crate::files::*;
 

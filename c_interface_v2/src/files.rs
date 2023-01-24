@@ -1,7 +1,7 @@
 use lockbook_core::{
-    CreateFileAtPathError, ExportDrawingError, ExportFileError, FileDeleteError,
+    CreateFileAtPathError, ExportDrawingError, ExportFileError, File, FileDeleteError, FileType,
     GetAndGetChildrenError, GetFileByIdError, GetFileByPathError, MoveFileError, ReadDocumentError,
-    RenameFileError, WriteToDocumentError,
+    RenameFileError, Share, ShareMode, SupportedImageFormats, Uuid, WriteToDocumentError,
 };
 
 use crate::*;

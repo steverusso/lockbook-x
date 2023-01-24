@@ -7,8 +7,8 @@ as `lbcli` (and other Go projects) will likely live here forever.
 
 ## Projects
 
-* [`c_interace_v2`](./c_interface_v2) - C API in Rust.
-* [`go-lockbook`](./go-lockbook) - Go bindings for Lockbook core that use the generated C bindings.
+* [`c_interface_v2`](./c_interface_v2) - C FFI (in Rust) for [`lockook_core`](https://github.com/lockbook/lockbook/tree/master/libs/core).
+* [`go-lockbook`](./go-lockbook) - Go bindings for Lockbook core using `c_interface_v2`.
 * [`lbcli`](./lbcli) - A CLI written in Go using the Go bindings.
 * [`lbcli-rs`](./lbcli-rs) - A more minimal CLI in Rust.
 
