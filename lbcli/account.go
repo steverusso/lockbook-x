@@ -64,7 +64,7 @@ func acctInit(core lb.Core, ip acctInitParams) error {
 	return nil
 }
 
-func acctWhoAmI(core lb.Core, long bool, dir string) error {
+func acctWhoAmI(core lb.Core, long bool) error {
 	acct, err := core.GetAccount()
 	if err != nil {
 		return fmt.Errorf("getting account: %w", err)
@@ -73,7 +73,7 @@ func acctWhoAmI(core lb.Core, long bool, dir string) error {
 		fmt.Println(acct.Username)
 		return nil
 	}
-	fmt.Printf("data-dir: %s\n", dir)
+	fmt.Printf("data-dir: %s\n", core.WriteablePath())
 	fmt.Printf("username: %s\n", acct.Username)
 	fmt.Printf("server:   %s\n", acct.APIURL)
 	return nil

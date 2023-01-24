@@ -133,6 +133,14 @@ pub unsafe extern "C" fn lb_bytes_result_free(r: LbBytesResult) {
     lb_error_free(r.err);
 }
 
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_string_free(s: *mut c_char) {
+    if !s.is_null() {
+        let _ = CString::from_raw(s);
+    }
+}
+
 #[repr(C)]
 pub struct LbInitResult {
     core: *mut c_void,
@@ -160,6 +168,14 @@ pub unsafe extern "C" fn lb_init(writeable_path: *const c_char, logs: bool) -> L
         }
     }
     r
+}
+
+/// # Safety
+///
+/// The returned value must be passed to `lb_string_free` to avoid a memory leak.
+#[no_mangle]
+pub unsafe extern "C" fn lb_writeable_path(core: *mut c_void) -> *mut c_char {
+    cstr(core!(core).config.writeable_path.clone())
 }
 
 #[repr(C)]

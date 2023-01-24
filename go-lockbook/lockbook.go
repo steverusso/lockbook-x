@@ -10,6 +10,8 @@ import (
 )
 
 type Core interface {
+	WriteablePath() string
+
 	GetAccount() (Account, error)
 	CreateAccount(uname string, welcome bool) (Account, error)
 	ImportAccount(acctStr string) (Account, error)

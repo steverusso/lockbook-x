@@ -423,7 +423,7 @@ func main() {
 					},
 				},
 				Action: func(c *cli.Context) error {
-					return acctWhoAmI(core, c.Bool("long"), dataDir)
+					return acctWhoAmI(core, c.Bool("long"))
 				},
 			},
 			{

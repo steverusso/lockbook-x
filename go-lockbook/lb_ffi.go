@@ -33,6 +33,12 @@ func initLbCoreFFI(fpath string) (*lbCoreFFI, error) {
 	return &lbCoreFFI{ref: r.core}, nil
 }
 
+func (l *lbCoreFFI) WriteablePath() string {
+	s := C.lb_writeable_path(l.ref)
+	defer C.lb_string_free(s)
+	return C.GoString(s)
+}
+
 func (l *lbCoreFFI) GetAccount() (Account, error) {
 	r := C.lb_get_account(l.ref)
 	defer C.lb_account_result_free(r)
