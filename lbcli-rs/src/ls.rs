@@ -213,6 +213,9 @@ pub fn ls(core: &Core, args: LsArgs) -> Result<(), CliError> {
         dirs: args.dirs,
         docs: args.docs,
     };
+    if args.full_ids {
+        cfg.long = true;
+    }
 
     for ch in get_children(core, &files, id, &mut cfg)? {
         print_node(&ch, &cfg);
