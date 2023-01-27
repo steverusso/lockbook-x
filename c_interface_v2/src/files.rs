@@ -51,12 +51,8 @@ pub unsafe fn lb_file_new(f: File) -> LbFile {
 }
 
 pub unsafe fn lb_file_free(f: LbFile) {
-    if !f.name.is_null() {
-        libc::free(f.name as *mut c_void);
-    }
-    if !f.lastmod_by.is_null() {
-        libc::free(f.lastmod_by as *mut c_void);
-    }
+    libc::free(f.name as *mut c_void);
+    libc::free(f.lastmod_by as *mut c_void);
     lb_share_list_free(f.shares);
 }
 
@@ -116,12 +112,8 @@ pub unsafe extern "C" fn lb_share_list_index(sl: LbShareList, i: usize) -> *mut 
 unsafe fn lb_share_list_free(sl: LbShareList) {
     let list = Vec::from_raw_parts(sl.list, sl.count, sl.count);
     for sh in list {
-        if !sh.by.is_null() {
-            libc::free(sh.by as *mut c_void);
-        }
-        if !sh.with.is_null() {
-            libc::free(sh.with as *mut c_void);
-        }
+        libc::free(sh.by as *mut c_void);
+        libc::free(sh.with as *mut c_void);
     }
 }
 
@@ -473,12 +465,8 @@ pub struct LbImexFileInfo {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_imex_file_info_free(fi: LbImexFileInfo) {
-    if !fi.disk_path.is_null() {
-        libc::free(fi.disk_path as *mut c_void);
-    }
-    if !fi.lb_path.is_null() {
-        libc::free(fi.lb_path as *mut c_void);
-    }
+    libc::free(fi.disk_path as *mut c_void);
+    libc::free(fi.lb_path as *mut c_void);
 }
 
 pub type LbImexCallback = unsafe extern "C" fn(LbImexFileInfo, *mut c_void);

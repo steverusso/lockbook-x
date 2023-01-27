@@ -55,9 +55,7 @@ fn lb_error_none() -> LbError {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_error_free(err: LbError) {
-    if !err.msg.is_null() {
-        libc::free(err.msg as *mut c_void);
-    }
+    libc::free(err.msg as *mut c_void);
 }
 
 #[repr(C)]
@@ -113,9 +111,7 @@ fn lb_string_result_new() -> LbStringResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_string_result_free(r: LbStringResult) {
-    if !r.ok.is_null() {
-        libc::free(r.ok as *mut c_void);
-    }
+    libc::free(r.ok as *mut c_void);
     lb_error_free(r.err);
 }
 
@@ -137,18 +133,8 @@ fn lb_bytes_result_new() -> LbBytesResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_bytes_result_free(r: LbBytesResult) {
-    if !r.bytes.is_null() {
-        let _ = Vec::from_raw_parts(r.bytes, r.count, r.count);
-    }
+    let _ = Vec::from_raw_parts(r.bytes, r.count, r.count);
     lb_error_free(r.err);
-}
-
-/// # Safety
-#[no_mangle]
-pub unsafe extern "C" fn lb_string_free(s: *mut c_char) {
-    if !s.is_null() {
-        libc::free(s as *mut c_void);
-    }
 }
 
 #[repr(C)]
@@ -206,9 +192,7 @@ pub unsafe extern "C" fn lb_validate_result_index(r: LbValidateResult, i: usize)
 pub unsafe extern "C" fn lb_validate_result_free(r: LbValidateResult) {
     let warnings = Vec::from_raw_parts(r.warnings, r.n_warnings, r.n_warnings);
     for w in warnings {
-        if !w.is_null() {
-            libc::free(w as *mut c_void);
-        }
+        libc::free(w as *mut c_void);
     }
     lb_error_free(r.err);
 }

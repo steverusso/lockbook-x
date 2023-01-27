@@ -18,12 +18,8 @@ fn lb_account_new() -> LbAccount {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_account_free(a: LbAccount) {
-    if !a.username.is_null() {
-        libc::free(a.username as *mut c_void);
-    }
-    if !a.api_url.is_null() {
-        libc::free(a.api_url as *mut c_void);
-    }
+    libc::free(a.username as *mut c_void);
+    libc::free(a.api_url as *mut c_void);
 }
 
 #[repr(C)]

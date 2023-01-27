@@ -34,11 +34,9 @@ pub unsafe extern "C" fn lb_calc_work_result_index(
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_calc_work_result_free(r: LbCalcWorkResult) {
-    if !r.units.is_null() {
-        let units = Vec::from_raw_parts(r.units, r.num_units, r.num_units);
-        for wu in units {
-            lb_file_free(wu.file);
-        }
+    let units = Vec::from_raw_parts(r.units, r.num_units, r.num_units);
+    for wu in units {
+        lb_file_free(wu.file);
     }
     lb_error_free(r.err);
 }
@@ -106,12 +104,8 @@ pub struct LbClientWorkUnit {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_sync_progress_free(sp: LbSyncProgress) {
-    if !sp.current_wu.pull_doc.is_null() {
-        libc::free(sp.current_wu.pull_doc as *mut c_void);
-    }
-    if !sp.current_wu.push_doc.is_null() {
-        libc::free(sp.current_wu.push_doc as *mut c_void);
-    }
+    libc::free(sp.current_wu.pull_doc as *mut c_void);
+    libc::free(sp.current_wu.push_doc as *mut c_void);
 }
 
 pub type LbSyncProgressCallback = unsafe extern "C" fn(LbSyncProgress, *mut c_void);
@@ -194,12 +188,7 @@ pub unsafe extern "C" fn lb_usage_result_index(r: LbUsageResult, i: usize) -> *m
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_usage_result_free(r: LbUsageResult) {
-    let usages = Vec::from_raw_parts(r.usages, r.num_usages, r.num_usages);
-    for fu in usages {
-        if !fu.id.is_null() {
-            libc::free(fu.id as *mut c_void);
-        }
-    }
+    let _ = Vec::from_raw_parts(r.usages, r.num_usages, r.num_usages);
     lb_usage_item_metric_free(r.server_usage);
     lb_usage_item_metric_free(r.data_cap);
     lb_error_free(r.err);
@@ -221,14 +210,12 @@ fn lb_usage_item_metric_none() -> LbUsageItemMetric {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_usage_item_metric_free(m: LbUsageItemMetric) {
-    if !m.readable.is_null() {
-        libc::free(m.readable as *mut c_void);
-    }
+    libc::free(m.readable as *mut c_void);
 }
 
 #[repr(C)]
 pub struct LbFileUsage {
-    id: *mut c_char,
+    id: [u8; UUID_LEN],
     size_bytes: u64,
 }
 
@@ -249,7 +236,7 @@ pub unsafe extern "C" fn lb_get_usage(core: *mut c_void) -> LbUsageResult {
             let mut usages = Vec::with_capacity(m.usages.len());
             for fu in m.usages {
                 usages.push(LbFileUsage {
-                    id: cstr(fu.file_id.to_string()),
+                    id: fu.file_id.into_bytes(),
                     size_bytes: fu.size_bytes,
                 });
             }

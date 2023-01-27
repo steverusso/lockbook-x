@@ -14,9 +14,7 @@ pub struct LbSubInfoResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_sub_info_result_free(r: LbSubInfoResult) {
-    if !r.stripe_last4.is_null() {
-        libc::free(r.stripe_last4 as *mut c_void);
-    }
+    libc::free(r.stripe_last4 as *mut c_void);
     lb_error_free(r.err);
 }
 

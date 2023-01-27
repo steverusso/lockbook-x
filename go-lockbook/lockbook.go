@@ -232,7 +232,7 @@ type UsageItemMetric struct {
 }
 
 type FileUsage struct {
-	FileID    string
+	FileID    FileID
 	SizeBytes uint64
 }
 

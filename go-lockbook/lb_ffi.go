@@ -35,7 +35,7 @@ func initLbCoreFFI(fpath string) (*lbCoreFFI, error) {
 
 func (l *lbCoreFFI) WriteablePath() string {
 	s := C.lb_writeable_path(l.ref)
-	defer C.lb_string_free(s)
+	defer C.free(unsafe.Pointer(s))
 	return C.GoString(s)
 }
 
@@ -229,7 +229,7 @@ func (l *lbCoreFFI) GetUsage() (UsageMetrics, error) {
 	for i = 0; i < r.num_usages; i++ {
 		fu := C.lb_usage_result_index(r, i)
 		fileUsages[i] = FileUsage{
-			FileID:    C.GoString(fu.id),
+			FileID:    goFileID(fu.id),
 			SizeBytes: uint64(fu.size_bytes),
 		}
 	}
