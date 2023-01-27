@@ -45,10 +45,21 @@ pub struct LbError {
     msg: *mut c_char,
 }
 
-fn lb_error_none() -> LbError {
+/// # Safety
+#[no_mangle]
+pub extern "C" fn lb_error_none() -> LbError {
     LbError {
         code: LbErrorCode::Zero_,
         msg: null_mut(),
+    }
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_error_copy(err: LbError) -> LbError {
+    LbError {
+        code: err.code,
+        msg: libc::strdup(err.msg),
     }
 }
 

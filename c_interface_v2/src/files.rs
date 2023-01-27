@@ -50,7 +50,8 @@ pub unsafe fn lb_file_new(f: File) -> LbFile {
     }
 }
 
-pub unsafe fn lb_file_free(f: LbFile) {
+#[no_mangle]
+pub unsafe extern "C" fn lb_file_free(f: LbFile) {
     libc::free(f.name as *mut c_void);
     libc::free(f.lastmod_by as *mut c_void);
     lb_share_list_free(f.shares);
