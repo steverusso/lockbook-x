@@ -107,10 +107,10 @@ pub struct LbClientWorkUnit {
 #[no_mangle]
 pub unsafe extern "C" fn lb_sync_progress_free(sp: LbSyncProgress) {
     if !sp.current_wu.pull_doc.is_null() {
-        let _ = CString::from_raw(sp.current_wu.pull_doc);
+        libc::free(sp.current_wu.pull_doc as *mut c_void);
     }
     if !sp.current_wu.push_doc.is_null() {
-        let _ = CString::from_raw(sp.current_wu.push_doc);
+        libc::free(sp.current_wu.push_doc as *mut c_void);
     }
 }
 
@@ -197,7 +197,7 @@ pub unsafe extern "C" fn lb_usage_result_free(r: LbUsageResult) {
     let usages = Vec::from_raw_parts(r.usages, r.num_usages, r.num_usages);
     for fu in usages {
         if !fu.id.is_null() {
-            let _ = CString::from_raw(fu.id);
+            libc::free(fu.id as *mut c_void);
         }
     }
     lb_usage_item_metric_free(r.server_usage);
@@ -222,7 +222,7 @@ fn lb_usage_item_metric_none() -> LbUsageItemMetric {
 #[no_mangle]
 pub unsafe extern "C" fn lb_usage_item_metric_free(m: LbUsageItemMetric) {
     if !m.readable.is_null() {
-        let _ = CString::from_raw(m.readable);
+        libc::free(m.readable as *mut c_void);
     }
 }
 
