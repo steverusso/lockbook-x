@@ -30,7 +30,7 @@ pub struct LbFile {
     shares: LbShareList,
 }
 
-pub fn lb_file_new(f: File) -> LbFile {
+pub unsafe fn lb_file_new(f: File) -> LbFile {
     let mut typ = lb_file_type_doc();
     if let FileType::Folder = f.file_type {
         typ.tag = LbFileTypeTag::Folder;
@@ -52,10 +52,10 @@ pub fn lb_file_new(f: File) -> LbFile {
 
 pub unsafe fn lb_file_free(f: LbFile) {
     if !f.name.is_null() {
-        let _ = CString::from_raw(f.name);
+        libc::free(f.name as *mut c_void);
     }
     if !f.lastmod_by.is_null() {
-        let _ = CString::from_raw(f.lastmod_by);
+        libc::free(f.lastmod_by as *mut c_void);
     }
     lb_share_list_free(f.shares);
 }
@@ -88,7 +88,7 @@ pub struct LbShareList {
     count: usize,
 }
 
-fn lb_share_list_new(shares: Vec<Share>) -> LbShareList {
+unsafe fn lb_share_list_new(shares: Vec<Share>) -> LbShareList {
     let mut list = Vec::with_capacity(shares.len());
     for sh in shares {
         list.push(LbShare {
@@ -117,10 +117,10 @@ unsafe fn lb_share_list_free(sl: LbShareList) {
     let list = Vec::from_raw_parts(sl.list, sl.count, sl.count);
     for sh in list {
         if !sh.by.is_null() {
-            let _ = CString::from_raw(sh.by);
+            libc::free(sh.by as *mut c_void);
         }
         if !sh.with.is_null() {
-            let _ = CString::from_raw(sh.with);
+            libc::free(sh.with as *mut c_void);
         }
     }
 }
@@ -474,10 +474,10 @@ pub struct LbImexFileInfo {
 #[no_mangle]
 pub unsafe extern "C" fn lb_imex_file_info_free(fi: LbImexFileInfo) {
     if !fi.disk_path.is_null() {
-        let _ = CString::from_raw(fi.disk_path);
+        libc::free(fi.disk_path as *mut c_void);
     }
     if !fi.lb_path.is_null() {
-        let _ = CString::from_raw(fi.lb_path);
+        libc::free(fi.lb_path as *mut c_void);
     }
 }
 

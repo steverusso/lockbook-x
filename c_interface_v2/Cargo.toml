@@ -8,3 +8,4 @@ crate-type = ["lib", "staticlib", "cdylib"]
 
 [dependencies]
 lockbook-core = { path = "../lockbook/libs/core" }
+libc = "0.2.139"

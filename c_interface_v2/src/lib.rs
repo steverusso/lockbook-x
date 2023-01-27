@@ -3,19 +3,29 @@ mod files;
 mod subscription;
 mod sync_and_usage;
 
-use std::ffi::{c_char, c_void, CStr, CString};
+use std::ffi::{c_char, c_void};
 use std::ptr::null_mut;
 
 use lockbook_core::{Config, Core, Error};
 
 use crate::files::*;
 
-fn cstr(value: String) -> *mut c_char {
-    CString::new(value).expect("rust -> c string").into_raw()
+unsafe fn cstr(value: String) -> *mut c_char {
+    let len = value.len();
+    let s = libc::malloc(len + 1) as *mut c_char;
+    libc::memcpy(
+        s as *mut c_void,
+        value.as_bytes().as_ptr() as *mut c_void,
+        len,
+    );
+    std::ptr::write(s.add(len) as *mut u8, 0);
+    s
 }
 
 unsafe fn rstr<'a>(s: *const c_char) -> &'a str {
-    CStr::from_ptr(s).to_str().expect("*const char -> &str")
+    std::ffi::CStr::from_ptr(s)
+        .to_str()
+        .expect("*const char -> &str")
 }
 
 macro_rules! core {
@@ -46,7 +56,7 @@ fn lb_error_none() -> LbError {
 #[no_mangle]
 pub unsafe extern "C" fn lb_error_free(err: LbError) {
     if !err.msg.is_null() {
-        let _ = CString::from_raw(err.msg);
+        libc::free(err.msg as *mut c_void);
     }
 }
 
@@ -104,7 +114,7 @@ fn lb_string_result_new() -> LbStringResult {
 #[no_mangle]
 pub unsafe extern "C" fn lb_string_result_free(r: LbStringResult) {
     if !r.ok.is_null() {
-        let _ = CString::from_raw(r.ok);
+        libc::free(r.ok as *mut c_void);
     }
     lb_error_free(r.err);
 }
@@ -137,7 +147,7 @@ pub unsafe extern "C" fn lb_bytes_result_free(r: LbBytesResult) {
 #[no_mangle]
 pub unsafe extern "C" fn lb_string_free(s: *mut c_char) {
     if !s.is_null() {
-        let _ = CString::from_raw(s);
+        libc::free(s as *mut c_void);
     }
 }
 
@@ -197,7 +207,7 @@ pub unsafe extern "C" fn lb_validate_result_free(r: LbValidateResult) {
     let warnings = Vec::from_raw_parts(r.warnings, r.n_warnings, r.n_warnings);
     for w in warnings {
         if !w.is_null() {
-            let _ = CString::from_raw(w);
+            libc::free(w as *mut c_void);
         }
     }
     lb_error_free(r.err);
