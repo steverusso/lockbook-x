@@ -21,8 +21,8 @@ impl From<LbFileId> for Uuid {
 
 #[repr(C)]
 pub struct LbFile {
-    id: [u8; 16],
-    parent: [u8; 16],
+    id: [u8; UUID_LEN],
+    parent: [u8; UUID_LEN],
     name: *mut c_char,
     typ: LbFileType,
     lastmod_by: *mut c_char,
