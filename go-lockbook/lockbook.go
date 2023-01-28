@@ -61,7 +61,7 @@ func NewCore(fpath string) (Core, error) {
 type ErrorCode uint32
 
 const (
-	CodeEmpty ErrorCode = iota
+	CodeSuccess ErrorCode = iota
 	CodeUnexpected
 	CodeAccountExistsAlready
 	CodeAccountDoesNotExist

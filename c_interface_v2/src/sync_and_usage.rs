@@ -226,7 +226,7 @@ pub struct LbUsageResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_usage_result_free(r: LbUsageResult) {
-    if r.err.code != LbErrorCode::Zero_ {
+    if r.err.code != LbErrorCode::Success {
         lb_error_free(r.err);
     } else {
         lb_usage_free(r.ok);
@@ -290,7 +290,7 @@ pub struct LbUncUsageResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_unc_usage_result_free(r: LbUncUsageResult) {
-    if r.err.code != LbErrorCode::Zero_ {
+    if r.err.code != LbErrorCode::Success {
         lb_error_free(r.err);
     } else {
         lb_usage_item_metric_free(r.ok);

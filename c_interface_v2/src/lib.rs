@@ -49,7 +49,7 @@ pub struct LbError {
 #[no_mangle]
 pub extern "C" fn lb_error_none() -> LbError {
     LbError {
-        code: LbErrorCode::Zero_,
+        code: LbErrorCode::Success,
         msg: null_mut(),
     }
 }
@@ -72,7 +72,7 @@ pub unsafe extern "C" fn lb_error_free(err: LbError) {
 #[derive(PartialEq)]
 #[repr(C)]
 pub enum LbErrorCode {
-    Zero_ = 0,
+    Success = 0,
     Unexpected,
     AccountExistsAlready,
     AccountDoesNotExist,
