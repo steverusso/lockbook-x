@@ -219,15 +219,16 @@ func (l *lbCoreFFI) GetLastSyncedHumanString() (string, error) {
 
 func (l *lbCoreFFI) GetUsage() (UsageMetrics, error) {
 	r := C.lb_get_usage(l.ref)
-	defer C.lb_usage_result_free(r)
-
 	if r.err.code != 0 {
+		defer C.lb_error_free(r.err)
 		return UsageMetrics{}, newErrorFromC(r.err)
 	}
-	fileUsages := make([]FileUsage, int(r.num_usages))
+	defer C.lb_usage_free(r.ok)
+
+	fileUsages := make([]FileUsage, int(r.ok.num_usages))
 	var i C.size_t
-	for i = 0; i < r.num_usages; i++ {
-		fu := C.lb_usage_result_index(r, i)
+	for i = 0; i < r.ok.num_usages; i++ {
+		fu := C.lb_usage_index(r.ok, i)
 		fileUsages[i] = FileUsage{
 			FileID:    goFileID(fu.id),
 			SizeBytes: uint64(fu.size_bytes),
@@ -236,23 +237,23 @@ func (l *lbCoreFFI) GetUsage() (UsageMetrics, error) {
 	return UsageMetrics{
 		Usages: fileUsages,
 		ServerUsage: UsageItemMetric{
-			Exact:    uint64(r.server_usage.exact),
-			Readable: C.GoString(r.server_usage.readable),
+			Exact:    uint64(r.ok.server_usage.exact),
+			Readable: C.GoString(r.ok.server_usage.readable),
 		},
 		DataCap: UsageItemMetric{
-			Exact:    uint64(r.data_cap.exact),
-			Readable: C.GoString(r.data_cap.readable),
+			Exact:    uint64(r.ok.data_cap.exact),
+			Readable: C.GoString(r.ok.data_cap.readable),
 		},
 	}, nil
 }
 
 func (l *lbCoreFFI) GetUncompressedUsage() (UsageItemMetric, error) {
 	r := C.lb_get_uncompressed_usage(l.ref)
-	defer C.lb_unc_usage_result_free(r)
-
 	if r.err.code != 0 {
+		defer C.lb_error_free(r.err)
 		return UsageItemMetric{}, newErrorFromC(r.err)
 	}
+	defer C.lb_usage_item_metric_free(r.ok)
 	return UsageItemMetric{
 		Exact:    uint64(r.ok.exact),
 		Readable: C.GoString(r.ok.readable),

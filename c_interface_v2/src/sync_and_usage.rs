@@ -171,27 +171,31 @@ pub unsafe extern "C" fn lb_get_last_synced_human_string(core: *mut c_void) -> L
 }
 
 #[repr(C)]
-pub struct LbUsageResult {
+pub struct LbUsage {
     usages: *mut LbFileUsage,
     num_usages: usize,
     server_usage: LbUsageItemMetric,
     data_cap: LbUsageItemMetric,
-    err: LbError,
+}
+
+#[repr(C)]
+pub struct LbFileUsage {
+    id: [u8; UUID_LEN],
+    size_bytes: u64,
 }
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn lb_usage_result_index(r: LbUsageResult, i: usize) -> *mut LbFileUsage {
-    r.usages.add(i)
+pub unsafe extern "C" fn lb_usage_index(u: LbUsage, i: usize) -> *mut LbFileUsage {
+    u.usages.add(i)
 }
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn lb_usage_result_free(r: LbUsageResult) {
+pub unsafe extern "C" fn lb_usage_free(r: LbUsage) {
     let _ = Vec::from_raw_parts(r.usages, r.num_usages, r.num_usages);
     lb_usage_item_metric_free(r.server_usage);
     lb_usage_item_metric_free(r.data_cap);
-    lb_error_free(r.err);
 }
 
 #[repr(C)]
@@ -214,21 +218,35 @@ pub unsafe extern "C" fn lb_usage_item_metric_free(m: LbUsageItemMetric) {
 }
 
 #[repr(C)]
-pub struct LbFileUsage {
-    id: [u8; UUID_LEN],
-    size_bytes: u64,
+pub struct LbUsageResult {
+    ok: LbUsage,
+    err: LbError,
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_usage_result_free(r: LbUsageResult) {
+    if r.err.code != LbErrorCode::Zero_ {
+        lb_error_free(r.err);
+    } else {
+        lb_usage_free(r.ok);
+    }
 }
 
 /// # Safety
 ///
-/// The returned value must be passed to `lb_usage_result_free` to avoid a memory leak.
+/// In order to avoid a memory leak, either the `ok` value or the `err` value must be passed to
+/// `lb_usage_free` or `lb_error_free` respectively depending on whether there's an error or not.
+/// Alternatively, the whole return value can be passed to `lb_usage_result_free`.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_usage(core: *mut c_void) -> LbUsageResult {
     let mut r = LbUsageResult {
-        usages: null_mut(),
-        num_usages: 0,
-        server_usage: lb_usage_item_metric_none(),
-        data_cap: lb_usage_item_metric_none(),
+        ok: LbUsage {
+            usages: null_mut(),
+            num_usages: 0,
+            server_usage: lb_usage_item_metric_none(),
+            data_cap: lb_usage_item_metric_none(),
+        },
         err: lb_error_none(),
     };
     match core!(core).get_usage() {
@@ -241,12 +259,12 @@ pub unsafe extern "C" fn lb_get_usage(core: *mut c_void) -> LbUsageResult {
                 });
             }
             let mut usages = std::mem::ManuallyDrop::new(usages);
-            r.usages = usages.as_mut_ptr();
-            r.num_usages = usages.len();
-            r.server_usage.exact = m.server_usage.exact;
-            r.server_usage.readable = cstr(m.server_usage.readable);
-            r.data_cap.exact = m.data_cap.exact;
-            r.data_cap.readable = cstr(m.data_cap.readable);
+            r.ok.usages = usages.as_mut_ptr();
+            r.ok.num_usages = usages.len();
+            r.ok.server_usage.exact = m.server_usage.exact;
+            r.ok.server_usage.readable = cstr(m.server_usage.readable);
+            r.ok.data_cap.exact = m.data_cap.exact;
+            r.ok.data_cap.readable = cstr(m.data_cap.readable);
         }
         Err(err) => {
             use GetUsageError::*;
@@ -272,13 +290,19 @@ pub struct LbUncUsageResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_unc_usage_result_free(r: LbUncUsageResult) {
-    lb_usage_item_metric_free(r.ok);
-    lb_error_free(r.err);
+    if r.err.code != LbErrorCode::Zero_ {
+        lb_error_free(r.err);
+    } else {
+        lb_usage_item_metric_free(r.ok);
+    }
 }
 
 /// # Safety
 ///
-/// The returned value must be passed to `lb_unc_usage_result_free` to avoid a memory leak.
+/// In order to avoid a memory leak, either the `ok` value or the `err` value must be passed to
+/// `lb_usage_item_metric_free` or `lb_error_free` respectively depending on whether there's an
+/// error or not. Alternatively, the whole return value can be passed to
+/// `lb_unc_usage_result_free`.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_uncompressed_usage(core: *mut c_void) -> LbUncUsageResult {
     let mut r = LbUncUsageResult {

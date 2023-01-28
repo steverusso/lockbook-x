@@ -69,6 +69,7 @@ pub unsafe extern "C" fn lb_error_free(err: LbError) {
     libc::free(err.msg as *mut c_void);
 }
 
+#[derive(PartialEq)]
 #[repr(C)]
 pub enum LbErrorCode {
     Zero_ = 0,
