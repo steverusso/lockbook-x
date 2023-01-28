@@ -124,7 +124,7 @@ func (l *lbCoreFFI) WriteDocument(id FileID, data []byte) error {
 	defer C.free(unsafe.Pointer(cData))
 	e := C.lb_write_document(l.ref, cFileID(id), (*C.uchar)(cData), C.int(len(data)))
 	defer C.lb_error_free(e)
-	return newErrorFromC(e)
+	return newErrorOrNilFromC(e)
 }
 
 func (l *lbCoreFFI) CreateFile(name string, parentID FileID, typ FileType) (File, error) {
@@ -159,7 +159,7 @@ func (l *lbCoreFFI) CreateFileAtPath(lbPath string) (File, error) {
 func (l *lbCoreFFI) DeleteFile(id FileID) error {
 	e := C.lb_delete_file(l.ref, cFileID(id))
 	defer C.lb_error_free(e)
-	return newErrorFromC(e)
+	return newErrorOrNilFromC(e)
 }
 
 func (l *lbCoreFFI) RenameFile(id FileID, newName string) error {
@@ -167,13 +167,13 @@ func (l *lbCoreFFI) RenameFile(id FileID, newName string) error {
 	defer C.free(unsafe.Pointer(cNewName))
 	e := C.lb_rename_file(l.ref, cFileID(id), cNewName)
 	defer C.lb_error_free(e)
-	return newErrorFromC(e)
+	return newErrorOrNilFromC(e)
 }
 
 func (l *lbCoreFFI) MoveFile(srcID, destID FileID) error {
 	e := C.lb_move_file(l.ref, cFileID(srcID), cFileID(destID))
 	defer C.lb_error_free(e)
-	return newErrorFromC(e)
+	return newErrorOrNilFromC(e)
 }
 
 //export go_imex_callback
@@ -202,7 +202,7 @@ func (l *lbCoreFFI) ExportFile(id FileID, dest string, fn func(ImportExportFileI
 	defer C.free(unsafe.Pointer(cDest))
 	e := C.lb_export_file(l.ref, cFileID(id), cDest, C.LbImexCallback(C.go_imex_callback), handlePtr)
 	defer C.lb_error_free(e)
-	return newErrorFromC(e)
+	return newErrorOrNilFromC(e)
 }
 
 func (l *lbCoreFFI) ExportDrawing(id FileID, imgFmt ImageFormat) ([]byte, error) {
@@ -310,7 +310,7 @@ func (l *lbCoreFFI) SyncAll(fn func(SyncProgress)) error {
 	h := C.uintptr_t(handle)
 	e := C.lb_sync_all(l.ref, C.LbSyncProgressCallback(C.go_sync_callback), unsafe.Pointer(&h))
 	defer C.lb_error_free(e)
-	return newErrorFromC(e)
+	return newErrorOrNilFromC(e)
 }
 
 func (l *lbCoreFFI) ShareFile(id FileID, uname string, mode ShareMode) error {
@@ -322,7 +322,7 @@ func (l *lbCoreFFI) ShareFile(id FileID, uname string, mode ShareMode) error {
 	}
 	e := C.lb_share_file(l.ref, cFileID(id), cUname, uint32(cMode))
 	defer C.lb_error_free(e)
-	return newErrorFromC(e)
+	return newErrorOrNilFromC(e)
 }
 
 func (l *lbCoreFFI) GetPendingShares() ([]File, error) {
@@ -334,7 +334,7 @@ func (l *lbCoreFFI) GetPendingShares() ([]File, error) {
 func (l *lbCoreFFI) DeletePendingShare(id FileID) error {
 	e := C.lb_delete_pending_share(l.ref, cFileID(id))
 	defer C.lb_error_free(e)
-	return newErrorFromC(e)
+	return newErrorOrNilFromC(e)
 }
 
 func (l *lbCoreFFI) GetSubscriptionInfo() (SubscriptionInfo, error) {
@@ -364,7 +364,7 @@ func (l *lbCoreFFI) UpgradeViaStripe(card *CreditCard) error {
 	if card == nil {
 		e := C.lb_upgrade_account_stripe_old_card(l.ref)
 		defer C.lb_error_free(e)
-		return newErrorFromC(e)
+		return newErrorOrNilFromC(e)
 	}
 	cNumber := C.CString(card.Number)
 	defer C.free(unsafe.Pointer(cNumber))
@@ -372,13 +372,13 @@ func (l *lbCoreFFI) UpgradeViaStripe(card *CreditCard) error {
 	defer C.free(unsafe.Pointer(cCVC))
 	e := C.lb_upgrade_account_stripe_new_card(l.ref, cNumber, C.int(card.ExpiryYear), C.int(card.ExpiryMonth), cCVC)
 	defer C.lb_error_free(e)
-	return newErrorFromC(e)
+	return newErrorOrNilFromC(e)
 }
 
 func (l *lbCoreFFI) CancelSubscription() error {
 	e := C.lb_cancel_subscription(l.ref)
 	defer C.lb_error_free(e)
-	return newErrorFromC(e)
+	return newErrorOrNilFromC(e)
 }
 
 func (l *lbCoreFFI) Validate() ([]string, error) {
@@ -401,13 +401,17 @@ func DefaultAPILocation() string {
 }
 
 func newErrorFromC(e C.LbError) error {
-	if e.code == 0 {
-		return nil
-	}
 	return &Error{
 		Code: ErrorCode(e.code),
 		Msg:  C.GoString(e.msg),
 	}
+}
+
+func newErrorOrNilFromC(e C.LbError) error {
+	if e.code == 0 {
+		return nil
+	}
+	return newErrorFromC(e)
 }
 
 func cFileID(v FileID) (r C.LbFileId) {
@@ -487,7 +491,7 @@ func goFileResult(r C.LbFileResult) (File, error) {
 }
 
 func goFileListResult(r C.LbFileListResult) ([]File, error) {
-	if err := newErrorFromC(r.err); err != nil {
+	if err := newErrorOrNilFromC(r.err); err != nil {
 		return nil, err
 	}
 	files := make([]File, int(r.ok.count))
