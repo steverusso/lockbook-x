@@ -176,9 +176,13 @@ func (l *lbCoreFFI) ExportFile(id FileID, dest string, fn func(ImportExportFileI
 		})
 	})
 	defer handle.Delete()
-	h := C.uintptr_t(handle)
 	cDest := C.CString(dest)
-	e := C.lb_export_file(l.ref, cFileID(id), cDest, C.LbImexCallback(C.go_imex_callback), unsafe.Pointer(&h))
+	e := C.lb_export_file(l.ref,
+		cFileID(id),
+		cDest,
+		C.LbImexCallback(C.go_imex_callback),
+		unsafe.Pointer(&handle),
+	)
 	C.free(unsafe.Pointer(cDest))
 	return newErrorOrNilFromC(e)
 }
@@ -283,8 +287,7 @@ func (l *lbCoreFFI) SyncAll(fn func(SyncProgress)) error {
 		})
 	})
 	defer handle.Delete()
-	h := C.uintptr_t(handle)
-	e := C.lb_sync_all(l.ref, C.LbSyncProgressCallback(C.go_sync_callback), unsafe.Pointer(&h))
+	e := C.lb_sync_all(l.ref, C.LbSyncProgressCallback(C.go_sync_callback), unsafe.Pointer(&handle))
 	return newErrorOrNilFromC(e)
 }
 
