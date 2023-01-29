@@ -3,31 +3,49 @@ use lockbook_core::{CancelSubscriptionError, PaymentMethod, PaymentPlatform, Str
 use crate::*;
 
 #[repr(C)]
-pub struct LbSubInfoResult {
+pub struct LbSubInfo {
     stripe_last4: *mut c_char,
     google_play_state: u8,
     app_store_state: u8,
     period_end: u64,
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_sub_info_free(si: LbSubInfo) {
+    libc::free(si.stripe_last4 as *mut c_void);
+}
+
+#[repr(C)]
+pub struct LbSubInfoResult {
+    ok: LbSubInfo,
     err: LbError,
 }
 
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_sub_info_result_free(r: LbSubInfoResult) {
-    libc::free(r.stripe_last4 as *mut c_void);
-    lb_error_free(r.err);
+    if r.err.code == LbErrorCode::Success {
+        lb_sub_info_free(r.ok);
+    } else {
+        lb_error_free(r.err);
+    }
 }
 
 /// # Safety
 ///
 /// The returned value must be passed to `lb_sub_info_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_sub_info_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_subscription_info(core: *mut c_void) -> LbSubInfoResult {
     let mut r = LbSubInfoResult {
-        stripe_last4: null_mut(),
-        google_play_state: 0,
-        app_store_state: 0,
-        period_end: 0,
+        ok: LbSubInfo {
+            stripe_last4: null_mut(),
+            google_play_state: 0,
+            app_store_state: 0,
+            period_end: 0,
+        },
         err: lb_error_none(),
     };
     match core!(core).get_subscription_info() {
@@ -35,13 +53,13 @@ pub unsafe extern "C" fn lb_get_subscription_info(core: *mut c_void) -> LbSubInf
         Ok(Some(info)) => {
             use PaymentPlatform::*;
             match info.payment_platform {
-                Stripe { card_last_4_digits } => r.stripe_last4 = cstr(card_last_4_digits),
+                Stripe { card_last_4_digits } => r.ok.stripe_last4 = cstr(card_last_4_digits),
                 // The integer representations of both the google play and app store account
                 // state enums are bound together by a unit test in this crate.
-                GooglePlay { account_state } => r.google_play_state = account_state as u8 + 1,
-                AppStore { account_state } => r.app_store_state = account_state as u8 + 1,
+                GooglePlay { account_state } => r.ok.google_play_state = account_state as u8 + 1,
+                AppStore { account_state } => r.ok.app_store_state = account_state as u8 + 1,
             }
-            r.period_end = info.period_end;
+            r.ok.period_end = info.period_end;
         }
         Err(err) => {
             r.err.msg = cstr(format!("{:?}", err));

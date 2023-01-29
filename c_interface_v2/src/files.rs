@@ -158,8 +158,11 @@ fn lb_file_result_new() -> LbFileResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_file_result_free(r: LbFileResult) {
-    lb_file_free(r.ok);
-    lb_error_free(r.err);
+    if r.err.code == LbErrorCode::Success {
+        lb_file_free(r.ok);
+    } else {
+        lb_error_free(r.err);
+    }
 }
 
 #[repr(C)]
@@ -181,23 +184,17 @@ fn lb_file_list_result_new() -> LbFileListResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_file_list_result_free(r: LbFileListResult) {
-    let list = Vec::from_raw_parts(r.ok.list, r.ok.count, r.ok.count);
-    for f in list {
-        lb_file_free(f);
+    if r.err.code == LbErrorCode::Success {
+        lb_file_list_free(r.ok);
+    } else {
+        lb_error_free(r.err);
     }
-    lb_error_free(r.err);
 }
 
 #[repr(C)]
 pub struct LbFileList {
     list: *mut LbFile,
     count: usize,
-}
-
-/// # Safety
-#[no_mangle]
-pub unsafe extern "C" fn lb_file_list_index(fl: LbFileList, i: usize) -> *mut LbFile {
-    fl.list.add(i)
 }
 
 unsafe fn lb_file_list_init(fl: &mut LbFileList, from: Vec<File>) {
@@ -211,8 +208,25 @@ unsafe fn lb_file_list_init(fl: &mut LbFileList, from: Vec<File>) {
 }
 
 /// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_file_list_index(fl: LbFileList, i: usize) -> *mut LbFile {
+    fl.list.add(i)
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_file_list_free(fl: LbFileList) {
+    let list = Vec::from_raw_parts(fl.list, fl.count, fl.count);
+    for f in list {
+        lb_file_free(f);
+    }
+}
+
+/// # Safety
 ///
 /// The returned value must be passed to `lb_file_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_file_free` or `lb_error_free`
+/// respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_create_file(
     core: *mut c_void,
@@ -241,6 +255,8 @@ pub unsafe extern "C" fn lb_create_file(
 /// # Safety
 ///
 /// The returned value must be passed to `lb_file_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_file_free` or `lb_error_free`
+/// respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_create_file_at_path(
     core: *mut c_void,
@@ -270,6 +286,8 @@ pub unsafe extern "C" fn lb_create_file_at_path(
 /// # Safety
 ///
 /// The returned value must be passed to `lb_file_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_file_free` or `lb_error_free`
+/// respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_file_by_id(core: *mut c_void, id: LbFileId) -> LbFileResult {
     let mut r = lb_file_result_new();
@@ -291,6 +309,8 @@ pub unsafe extern "C" fn lb_get_file_by_id(core: *mut c_void, id: LbFileId) -> L
 /// # Safety
 ///
 /// The returned value must be passed to `lb_file_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_file_free` or `lb_error_free`
+/// respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_file_by_path(
     core: *mut c_void,
@@ -315,6 +335,8 @@ pub unsafe extern "C" fn lb_get_file_by_path(
 /// # Safety
 ///
 /// The returned value must be passed to `lb_string_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `free` or `lb_error_free`
+/// respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_path_by_id(core: *mut c_void, id: LbFileId) -> LbStringResult {
     let mut r = lb_string_result_new();
@@ -331,6 +353,8 @@ pub unsafe extern "C" fn lb_get_path_by_id(core: *mut c_void, id: LbFileId) -> L
 /// # Safety
 ///
 /// The returned value must be passed to `lb_file_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_file_free` or `lb_error_free`
+/// respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_root(core: *mut c_void) -> LbFileResult {
     let mut r = lb_file_result_new();
@@ -347,6 +371,8 @@ pub unsafe extern "C" fn lb_get_root(core: *mut c_void) -> LbFileResult {
 /// # Safety
 ///
 /// The returned value must be passed to `lb_file_list_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_file_list_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_children(core: *mut c_void, id: LbFileId) -> LbFileListResult {
     let mut r = lb_file_list_result_new();
@@ -363,6 +389,8 @@ pub unsafe extern "C" fn lb_get_children(core: *mut c_void, id: LbFileId) -> LbF
 /// # Safety
 ///
 /// The returned value must be passed to `lb_file_list_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_file_list_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_and_get_children_recursively(
     core: *mut c_void,
@@ -389,6 +417,8 @@ pub unsafe extern "C" fn lb_get_and_get_children_recursively(
 /// # Safety
 ///
 /// The returned value must be passed to `lb_file_list_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_file_list_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_list_metadatas(core: *mut c_void) -> LbFileListResult {
     let mut r = lb_file_list_result_new();
@@ -405,6 +435,8 @@ pub unsafe extern "C" fn lb_list_metadatas(core: *mut c_void) -> LbFileListResul
 /// # Safety
 ///
 /// The returned value must be passed to `lb_bytes_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_bytes_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_read_document(core: *mut c_void, id: LbFileId) -> LbBytesResult {
     let mut r = lb_bytes_result_new();
@@ -412,8 +444,8 @@ pub unsafe extern "C" fn lb_read_document(core: *mut c_void, id: LbFileId) -> Lb
         Ok(mut data) => {
             data.shrink_to_fit();
             let mut data = std::mem::ManuallyDrop::new(data);
-            r.bytes = data.as_mut_ptr();
-            r.count = data.len();
+            r.ok.data = data.as_mut_ptr();
+            r.ok.size = data.len();
         }
         Err(err) => {
             use ReadDocumentError::*;
@@ -513,6 +545,8 @@ pub unsafe extern "C" fn lb_export_file(
 /// # Safety
 ///
 /// The returned value must be passed to `lb_bytes_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_bytes_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_export_drawing(
     core: *mut c_void,
@@ -538,8 +572,8 @@ pub unsafe extern "C" fn lb_export_drawing(
         Ok(mut data) => {
             data.shrink_to_fit();
             let mut data = std::mem::ManuallyDrop::new(data);
-            r.bytes = data.as_mut_ptr();
-            r.count = data.len();
+            r.ok.data = data.as_mut_ptr();
+            r.ok.size = data.len();
         }
         Err(err) => {
             use ExportDrawingError::*;
@@ -661,6 +695,8 @@ pub unsafe extern "C" fn lb_share_file(
 /// # Safety
 ///
 /// The returned value must be passed to `lb_file_list_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_file_list_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_pending_shares(core: *mut c_void) -> LbFileListResult {
     let mut r = lb_file_list_result_new();

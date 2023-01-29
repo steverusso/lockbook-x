@@ -123,21 +123,37 @@ fn lb_string_result_new() -> LbStringResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_string_result_free(r: LbStringResult) {
-    libc::free(r.ok as *mut c_void);
-    lb_error_free(r.err);
+    if r.err.code == LbErrorCode::Success {
+        libc::free(r.ok as *mut c_void);
+    } else {
+        lb_error_free(r.err);
+    }
+}
+
+#[repr(C)]
+pub struct LbBytes {
+    data: *mut u8,
+    size: usize,
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_bytes_free(b: LbBytes) {
+    let _ = Vec::from_raw_parts(b.data, b.size, b.size);
 }
 
 #[repr(C)]
 pub struct LbBytesResult {
-    bytes: *mut u8,
-    count: usize,
+    ok: LbBytes,
     err: LbError,
 }
 
 fn lb_bytes_result_new() -> LbBytesResult {
     LbBytesResult {
-        bytes: null_mut(),
-        count: 0,
+        ok: LbBytes {
+            data: null_mut(),
+            size: 0,
+        },
         err: lb_error_none(),
     }
 }
@@ -145,8 +161,11 @@ fn lb_bytes_result_new() -> LbBytesResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_bytes_result_free(r: LbBytesResult) {
-    let _ = Vec::from_raw_parts(r.bytes, r.count, r.count);
-    lb_error_free(r.err);
+    if r.err.code == LbErrorCode::Success {
+        lb_bytes_free(r.ok);
+    } else {
+        lb_error_free(r.err);
+    }
 }
 
 #[repr(C)]
@@ -180,43 +199,65 @@ pub unsafe extern "C" fn lb_init(writeable_path: *const c_char, logs: bool) -> L
 
 /// # Safety
 ///
-/// The returned value must be passed to `lb_string_free` to avoid a memory leak.
+/// The returned value must be passed to `free` to avoid a memory leak.
 #[no_mangle]
 pub unsafe extern "C" fn lb_writeable_path(core: *mut c_void) -> *mut c_char {
     cstr(core!(core).config.writeable_path.clone())
 }
 
 #[repr(C)]
+pub struct LbStringList {
+    data: *mut *mut c_char,
+    size: usize,
+}
+
+fn lb_string_list_new() -> LbStringList {
+    LbStringList {
+        data: null_mut(),
+        size: 0,
+    }
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_string_list_index(sl: LbStringList, i: usize) -> *mut c_char {
+    *sl.data.add(i)
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_string_list_free(sl: LbStringList) {
+    let data = Vec::from_raw_parts(sl.data, sl.size, sl.size);
+    for s in data {
+        libc::free(s as *mut c_void);
+    }
+}
+
+#[repr(C)]
 pub struct LbValidateResult {
-    warnings: *mut *mut c_char,
-    n_warnings: usize,
+    ok: LbStringList,
     err: LbError,
 }
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn lb_validate_result_index(r: LbValidateResult, i: usize) -> *mut c_char {
-    *r.warnings.add(i)
-}
-
-/// # Safety
-#[no_mangle]
 pub unsafe extern "C" fn lb_validate_result_free(r: LbValidateResult) {
-    let warnings = Vec::from_raw_parts(r.warnings, r.n_warnings, r.n_warnings);
-    for w in warnings {
-        libc::free(w as *mut c_void);
+    if r.err.code == LbErrorCode::Success {
+        lb_string_list_free(r.ok);
+    } else {
+        lb_error_free(r.err);
     }
-    lb_error_free(r.err);
 }
 
 /// # Safety
 ///
 /// The returned value must be passed to `lb_validate_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_string_list_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_validate(core: *mut c_void) -> LbValidateResult {
     let mut r = LbValidateResult {
-        warnings: null_mut(),
-        n_warnings: 0,
+        ok: lb_string_list_new(),
         err: lb_error_none(),
     };
     match core!(core).validate() {
@@ -226,8 +267,8 @@ pub unsafe extern "C" fn lb_validate(core: *mut c_void) -> LbValidateResult {
                 c_warnings.push(cstr(w.to_string()));
             }
             let mut c_warnings = std::mem::ManuallyDrop::new(c_warnings);
-            r.warnings = c_warnings.as_mut_ptr();
-            r.n_warnings = c_warnings.len();
+            r.ok.data = c_warnings.as_mut_ptr();
+            r.ok.size = c_warnings.len();
         }
         Err(err) => {
             r.err.msg = cstr(err.to_string());

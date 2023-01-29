@@ -3,10 +3,30 @@ use lockbook_core::{CalculateWorkError, ClientWorkUnit, GetUsageError, SyncAllEr
 use crate::*;
 
 #[repr(C)]
-pub struct LbCalcWorkResult {
+pub struct LbWorkCalc {
     units: *mut LbWorkUnit,
     num_units: usize,
     last_server_update_at: u64,
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_work_calc_index(wc: LbWorkCalc, i: usize) -> *mut LbWorkUnit {
+    wc.units.add(i)
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_work_calc_free(wc: LbWorkCalc) {
+    let units = Vec::from_raw_parts(wc.units, wc.num_units, wc.num_units);
+    for wu in units {
+        lb_file_free(wu.file);
+    }
+}
+
+#[repr(C)]
+pub struct LbCalcWorkResult {
+    ok: LbWorkCalc,
     err: LbError,
 }
 
@@ -24,32 +44,27 @@ pub enum LbWorkUnitType {
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn lb_calc_work_result_index(
-    r: LbCalcWorkResult,
-    i: usize,
-) -> *mut LbWorkUnit {
-    r.units.add(i)
-}
-
-/// # Safety
-#[no_mangle]
 pub unsafe extern "C" fn lb_calc_work_result_free(r: LbCalcWorkResult) {
-    let units = Vec::from_raw_parts(r.units, r.num_units, r.num_units);
-    for wu in units {
-        lb_file_free(wu.file);
+    if r.err.code == LbErrorCode::Success {
+        lb_work_calc_free(r.ok);
+    } else {
+        lb_error_free(r.err);
     }
-    lb_error_free(r.err);
 }
 
 /// # Safety
 ///
 /// The returned value must be passed to `lb_calc_work_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_work_calc_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_calculate_work(core: *mut c_void) -> LbCalcWorkResult {
     let mut r = LbCalcWorkResult {
-        units: null_mut(),
-        num_units: 0,
-        last_server_update_at: 0,
+        ok: LbWorkCalc {
+            units: null_mut(),
+            num_units: 0,
+            last_server_update_at: 0,
+        },
         err: lb_error_none(),
     };
     match core!(core).calculate_work() {
@@ -67,9 +82,9 @@ pub unsafe extern "C" fn lb_calculate_work(core: *mut c_void) -> LbCalcWorkResul
                 list.push(LbWorkUnit { typ, file });
             }
             let mut list = std::mem::ManuallyDrop::new(list);
-            r.units = list.as_mut_ptr();
-            r.num_units = list.len();
-            r.last_server_update_at = work.most_recent_update_from_server;
+            r.ok.units = list.as_mut_ptr();
+            r.ok.num_units = list.len();
+            r.ok.last_server_update_at = work.most_recent_update_from_server;
         }
         Err(err) => {
             use CalculateWorkError::*;
@@ -157,6 +172,8 @@ pub unsafe extern "C" fn lb_sync_all(
 /// # Safety
 ///
 /// The returned value must be passed to `lb_string_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `free` or `lb_error_free`
+/// respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_last_synced_human_string(core: *mut c_void) -> LbStringResult {
     let mut r = lb_string_result_new();
@@ -226,18 +243,18 @@ pub struct LbUsageResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_usage_result_free(r: LbUsageResult) {
-    if r.err.code != LbErrorCode::Success {
-        lb_error_free(r.err);
-    } else {
+    if r.err.code == LbErrorCode::Success {
         lb_usage_free(r.ok);
+    } else {
+        lb_error_free(r.err);
     }
 }
 
 /// # Safety
 ///
-/// In order to avoid a memory leak, either the `ok` value or the `err` value must be passed to
-/// `lb_usage_free` or `lb_error_free` respectively depending on whether there's an error or not.
-/// Alternatively, the whole return value can be passed to `lb_usage_result_free`.
+/// The returned value must be passed to `lb_usage_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_usage_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_usage(core: *mut c_void) -> LbUsageResult {
     let mut r = LbUsageResult {
@@ -290,19 +307,18 @@ pub struct LbUncUsageResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_unc_usage_result_free(r: LbUncUsageResult) {
-    if r.err.code != LbErrorCode::Success {
-        lb_error_free(r.err);
-    } else {
+    if r.err.code == LbErrorCode::Success {
         lb_usage_item_metric_free(r.ok);
+    } else {
+        lb_error_free(r.err);
     }
 }
 
 /// # Safety
 ///
-/// In order to avoid a memory leak, either the `ok` value or the `err` value must be passed to
-/// `lb_usage_item_metric_free` or `lb_error_free` respectively depending on whether there's an
-/// error or not. Alternatively, the whole return value can be passed to
-/// `lb_unc_usage_result_free`.
+/// The returned value must be passed to `lb_unc_usage_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_usage_item_metric_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_uncompressed_usage(core: *mut c_void) -> LbUncUsageResult {
     let mut r = LbUncUsageResult {

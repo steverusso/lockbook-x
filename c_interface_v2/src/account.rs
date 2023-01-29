@@ -38,13 +38,18 @@ fn lb_account_result_new() -> LbAccountResult {
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_account_result_free(r: LbAccountResult) {
-    lb_account_free(r.ok);
-    lb_error_free(r.err);
+    if r.err.code == LbErrorCode::Success {
+        lb_account_free(r.ok);
+    } else {
+        lb_error_free(r.err);
+    }
 }
 
 /// # Safety
 ///
 /// The returned value must be passed to `lb_account_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_account_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_create_account(
     core: *mut c_void,
@@ -80,6 +85,8 @@ pub unsafe extern "C" fn lb_create_account(
 /// # Safety
 ///
 /// The returned value must be passed to `lb_account_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_account_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_import_account(
     core: *mut c_void,
@@ -113,6 +120,8 @@ pub unsafe extern "C" fn lb_import_account(
 /// # Safety
 ///
 /// The returned value must be passed to `lb_string_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `free` or `lb_error_free`
+/// respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_export_account(core: *mut c_void) -> LbStringResult {
     let mut r = lb_string_result_new();
@@ -133,6 +142,8 @@ pub unsafe extern "C" fn lb_export_account(core: *mut c_void) -> LbStringResult 
 /// # Safety
 ///
 /// The returned value must be passed to `lb_account_result_free` to avoid a memory leak.
+/// Alternatively, the `ok` value or `err` value can be passed to `lb_account_free` or
+/// `lb_error_free` respectively depending on whether there's an error or not.
 #[no_mangle]
 pub unsafe extern "C" fn lb_get_account(core: *mut c_void) -> LbAccountResult {
     let mut r = lb_account_result_new();
