@@ -37,7 +37,7 @@ macro_rules! core {
 pub(crate) use core;
 
 #[no_mangle]
-pub static C_DEFAULT_API_LOCATION: &[u8; 30] = b"https://api.prod.lockbook.net\0";
+pub static LB_DEFAULT_API_LOCATION: &[u8; 30] = b"https://api.prod.lockbook.net\0";
 
 #[repr(C)]
 pub struct LbError {

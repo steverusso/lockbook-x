@@ -17,6 +17,8 @@ import (
 	"unsafe"
 )
 
+var DefaultAPILocation = C.GoString((*C.char)(unsafe.Pointer(&C.LB_DEFAULT_API_LOCATION[0])))
+
 type lbCoreFFI struct {
 	ref unsafe.Pointer
 }
@@ -368,10 +370,6 @@ func (l *lbCoreFFI) Validate() ([]string, error) {
 		warnings[i] = C.GoString(msg)
 	}
 	return warnings, nil
-}
-
-func DefaultAPILocation() string {
-	return C.GoString((*C.char)(unsafe.Pointer(&C.C_DEFAULT_API_LOCATION[0])))
 }
 
 func newErrorFromC(e C.LbError) error {

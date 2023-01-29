@@ -2,7 +2,7 @@
 fn ffi_api_location_matches() {
     assert_eq!(
         lockbook_core::DEFAULT_API_LOCATION,
-        std::ffi::CStr::from_bytes_with_nul(crate::C_DEFAULT_API_LOCATION)
+        std::ffi::CStr::from_bytes_with_nul(crate::LB_DEFAULT_API_LOCATION)
             .unwrap()
             .to_str()
             .unwrap()

@@ -45,7 +45,7 @@ func acctInit(core lb.Core, ip acctInitParams) error {
 		uname := scnr.Text()
 		apiURL := os.Getenv("API_URL")
 		if apiURL == "" {
-			apiURL = lb.DefaultAPILocation()
+			apiURL = lb.DefaultAPILocation
 		}
 		fmt.Println("generating keys and checking for username availability...")
 		_, err = core.CreateAccount(uname, ip.isWelcomeDoc)
