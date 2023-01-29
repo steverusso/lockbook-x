@@ -176,12 +176,10 @@ func (l *lbCoreFFI) ExportFile(id FileID, dest string, fn func(ImportExportFileI
 		})
 	})
 	defer handle.Delete()
-	handlePtr := C.malloc(C.sizeof_uintptr_t)
-	defer C.free(handlePtr)
-	*(*C.uintptr_t)(handlePtr) = C.uintptr_t(handle)
+	h := C.uintptr_t(handle)
 	cDest := C.CString(dest)
-	defer C.free(unsafe.Pointer(cDest))
-	e := C.lb_export_file(l.ref, cFileID(id), cDest, C.LbImexCallback(C.go_imex_callback), handlePtr)
+	e := C.lb_export_file(l.ref, cFileID(id), cDest, C.LbImexCallback(C.go_imex_callback), unsafe.Pointer(&h))
+	C.free(unsafe.Pointer(cDest))
 	return newErrorOrNilFromC(e)
 }
 
