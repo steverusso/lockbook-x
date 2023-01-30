@@ -12,14 +12,10 @@ use crate::files::*;
 
 unsafe fn cstr(value: String) -> *mut c_char {
     let len = value.len();
-    let s = libc::malloc(len + 1) as *mut c_char;
-    libc::memcpy(
-        s as *mut c_void,
-        value.as_bytes().as_ptr() as *mut c_void,
-        len,
-    );
-    std::ptr::write(s.add(len) as *mut u8, 0);
-    s
+    let s = libc::malloc(len + 1);
+    libc::memcpy(s, value.as_bytes().as_ptr() as *mut c_void, len);
+    std::ptr::write(s.add(len) as *mut c_char, 0);
+    s as *mut c_char
 }
 
 unsafe fn rstr<'a>(s: *const c_char) -> &'a str {
