@@ -4,6 +4,8 @@ version: '3'
 
 vars:
   GO_LDFLAGS: '-ldflags "-s -w"'
+  C_INTERFACE_LIB: target/release/libc_interface_v2.a
+  C_INTERFACE_HEADER: lockbook_core.h
 
 tasks:
   lbcli:
@@ -31,14 +33,17 @@ tasks:
 
   c-ffi-v2:
     dir: c_interface_v2
-    vars:
-      C_INTERFACE: src/lib.rs
-      HEADER: lockbook_core.h
     cmds:
       - task: rust-fmt
       - cargo build -q --release
-      - cbindgen {{.C_INTERFACE}} --config ./cbindgen.toml > ../{{.HEADER}}
+      - cbindgen src/lib.rs --config cbindgen.toml > ../{{.C_INTERFACE_HEADER}}
       - task: rust-lint
+    sources:
+      - src/**
+      - cbindgen.toml
+    generates:
+      - ../{{.C_INTERFACE_LIB}}
+      - ../{{.C_INTERFACE_HEADER}}
 
   lbcli-rs:
     - task: rust-fmt
