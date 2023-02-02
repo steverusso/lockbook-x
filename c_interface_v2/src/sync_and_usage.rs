@@ -169,6 +169,40 @@ pub unsafe extern "C" fn lb_sync_all(
     e
 }
 
+#[repr(C)]
+pub struct LbInt64Result {
+    ok: i64,
+    err: LbError,
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_int64_result_free(r: LbInt64Result) {
+    if r.err.code != LbErrorCode::Success {
+        lb_error_free(r.err);
+    }
+}
+
+/// # Safety
+///
+/// The returned value must be passed to `lb_int64_result_free` to avoid a memory leak.
+/// Alternatively, the `err` value can be passed to `lb_error_free` if there's an error.
+#[no_mangle]
+pub unsafe extern "C" fn lb_get_last_synced(core: *mut c_void) -> LbInt64Result {
+    let mut r = LbInt64Result {
+        ok: 0,
+        err: lb_error_none(),
+    };
+    match core!(core).get_last_synced() {
+        Ok(v) => r.ok = v,
+        Err(err) => {
+            r.err.msg = cstr(format!("{:?}", err));
+            r.err.code = LbErrorCode::Unexpected;
+        }
+    }
+    r
+}
+
 /// # Safety
 ///
 /// The returned value must be passed to `lb_string_result_free` to avoid a memory leak.

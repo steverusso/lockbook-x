@@ -37,6 +37,7 @@ type Core interface {
 	ExportFile(id FileID, dest string, fn func(ImportExportFileInfo)) error
 	ExportDrawing(id FileID, imgFmt ImageFormat) ([]byte, error)
 
+	GetLastSynced() (time.Time, error)
 	GetLastSyncedHumanString() (string, error)
 	GetUsage() (UsageMetrics, error)
 	GetUncompressedUsage() (UsageItemMetric, error)

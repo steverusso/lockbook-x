@@ -20,7 +20,6 @@ This differs from the current lockbook c_interface (v1) in a few key ways:
 The following are `lockbook-core` endpoints that have yet to be implemented (roughly in
 order of priority):
 
-* `get_last_synced`
 * `import_file`
 * `get_drawing`
 * `save_drawing`

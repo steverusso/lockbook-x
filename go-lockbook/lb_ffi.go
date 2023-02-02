@@ -194,6 +194,15 @@ func (l *lbCoreFFI) ExportDrawing(id FileID, imgFmt ImageFormat) ([]byte, error)
 	return goBytesResult(r)
 }
 
+func (l *lbCoreFFI) GetLastSynced() (time.Time, error) {
+	r := C.lb_get_last_synced(l.ref)
+	if r.err.code != 0 {
+		defer C.lb_error_free(r.err)
+		return time.Time{}, newErrorFromC(r.err)
+	}
+	return time.UnixMilli(int64(r.ok)), nil
+}
+
 func (l *lbCoreFFI) GetLastSyncedHumanString() (string, error) {
 	r := C.lb_get_last_synced_human_string(l.ref)
 	return goStringResult(r)
