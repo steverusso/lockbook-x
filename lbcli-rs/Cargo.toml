@@ -1,9 +1,0 @@
-[package]
-name = "lbcli-rs"
-version = "0.1.0"
-edition = "2018"
-
-[dependencies]
-lb = { path = "../lockbook/libs/core", package = "lockbook-core" }
-atty = "0.2"
-structopt = "0.3.13"
