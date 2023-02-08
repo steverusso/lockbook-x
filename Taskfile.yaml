@@ -46,11 +46,6 @@ tasks:
       - ../{{.C_INTERFACE_LIB}}
       - ../{{.C_INTERFACE_HEADER}}
 
-  lbcli-rs:
-    - task: rust-fmt
-    - cargo build -p lbcli-rs -q --release
-    - task: rust-lint
-
   rust-fmt:
     - cargo fmt --all --message-format short
 

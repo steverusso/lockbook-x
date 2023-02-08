@@ -1,7 +1,6 @@
 [workspace]
 members = [
 	"c_interface_v2",
-	"lbcli-rs",
 ]
 exclude = [
 	"lockbook/libs/core/libs/test_utils",
