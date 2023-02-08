@@ -25,8 +25,8 @@ github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/steverusso/gio-fonts v0.0.0-20221207034752-d3d43d7eae48 h1:ykYdzm6qenf6q9PDzy756ogG2QovKTwGJrskCfjr+XI=
 github.com/steverusso/gio-fonts v0.0.0-20221207034752-d3d43d7eae48/go.mod h1:hXPPLxKVyMb340G0pSyAHM9In2LK+IiKWU3oR/y3UUE=
-github.com/steverusso/mdedit v0.0.0-20221215033847-21feaf69cd7a h1:3Y/vzhOEF6k4cyWXDNI95BQuZ2Lh87y7ojwXjpMJe4s=
-github.com/steverusso/mdedit v0.0.0-20221215033847-21feaf69cd7a/go.mod h1:gj0UP9Zy+zfsjEdNkbBPIVzYCky2fFcoFkL8fDqGlmU=
+github.com/steverusso/mdedit v0.0.0-20230207184019-4ac49a57d2f9 h1:nQSnxd/iDyrSEnBT5qBuh3cHoc8I5s7RffRtrWNv5e0=
+github.com/steverusso/mdedit v0.0.0-20230207184019-4ac49a57d2f9/go.mod h1:gj0UP9Zy+zfsjEdNkbBPIVzYCky2fFcoFkL8fDqGlmU=
 github.com/urfave/cli/v2 v2.23.7 h1:YHDQ46s3VghFHFf1DdF+Sh7H4RqhcM+t0TmZRJx4oJY=
 github.com/urfave/cli/v2 v2.23.7/go.mod h1:GHupkWPMM0M/sj1a2b4wUrWBPzazNrIjouW6fmdJLxc=
 github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 h1:bAn7/zixMGCfxrRTfdpNzjtPYqr8smhKouy9mxVdGPU=
