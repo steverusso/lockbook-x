@@ -22,30 +22,30 @@ type tab struct {
 	btn       widget.Clickable
 	view      mdedit.View
 	isLoading bool
-	isSaving  bool
-	lastEdit  time.Time
-	lastSave  time.Time
+	isSaving  sharedValue[bool]
+	lastEdit  sharedValue[time.Time]
+	lastSave  sharedValue[time.Time]
 }
 
 func (t *tab) isDirty() bool {
-	return t.lastSave.Before(t.lastEdit)
+	return t.lastSave.get().Before(t.lastEdit.get())
 }
 
 func (ws *workspace) layMarkdownTab(gtx C, th *material.Theme, t *tab) D {
 	defer func() {
 		if t.view.Editor.HasChanged() {
 			ws.setLastEditAt(gtx.Now)
-			t.lastEdit = gtx.Now
+			t.lastEdit.set(gtx.Now)
 		}
 	}()
 	if t.view.Editor.SaveRequested() && t.isDirty() {
-		t.isSaving = true
+		t.isSaving.set(true)
 		ws.manualSave <- saveDocRequest{
 			id:   t.id,
 			data: t.view.Editor.Text(),
 		}
 	}
-	if t.isSaving {
+	if t.isSaving.get() {
 		layout.NE.Layout(gtx, func(gtx C) D {
 			return material.Loader(th).Layout(gtx)
 		})
@@ -131,8 +131,11 @@ func (ws *workspace) insertTab(id lockbook.FileID, name string) {
 	}
 	copy(ws.tabs[ws.activeTab+1:], ws.tabs[ws.activeTab:])
 	t := tab{
-		id:   id,
-		name: name,
+		id:       id,
+		name:     name,
+		isSaving: newSharedValue(false),
+		lastEdit: newSharedValue(time.Time{}),
+		lastSave: newSharedValue(time.Time{}),
 	}
 	t.view.Mode = mdedit.ViewModeSingle
 	t.view.SingleWidget = mdedit.SingleViewEditor

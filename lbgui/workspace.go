@@ -73,9 +73,9 @@ type workspace struct {
 	modals     []modal
 	modalCatch gesture.Click
 
-	lastActionAt  time.Time
-	lastEditAt    time.Time
-	nextSyncAt    time.Time
+	lastActionAt  sharedValue[time.Time]
+	lastEditAt    sharedValue[time.Time]
+	nextSyncAt    sharedValue[time.Time]
 	autoSaveTimer *time.Timer
 	autoSyncTimer *time.Timer
 	manualSave    chan saveDocRequest
@@ -89,7 +89,9 @@ func newWorkspace(updates chan<- legitUpdate, h handoffToWorkspace) workspace {
 		updates:       updates,
 		animPct:       1,
 		modals:        make([]modal, 0, 3),
-		lastActionAt:  time.Now(),
+		lastActionAt:  newSharedValue(time.Now()),
+		lastEditAt:    newSharedValue(time.Time{}),
+		nextSyncAt:    newSharedValue(time.Time{}),
 		autoSaveTimer: time.NewTimer(autoSaveInterval),
 		autoSyncTimer: time.NewTimer(autoSyncInterval),
 		manualSave:    make(chan saveDocRequest),
@@ -107,18 +109,18 @@ func newWorkspace(updates chan<- legitUpdate, h handoffToWorkspace) workspace {
 // setLastEditAt resets the auto-save timer if the duration between now and the edit
 // before this one is longer than the auto-save interval.
 func (ws *workspace) setLastEditAt(t time.Time) {
-	sinceLastEdit := time.Now().Sub(ws.lastEditAt)
+	sinceLastEdit := time.Now().Sub(ws.lastEditAt.get())
 	if sinceLastEdit > autoSaveInterval {
 		ws.autoSaveTimer.Reset(autoSaveInterval)
 	}
-	ws.lastEditAt = t
+	ws.lastEditAt.set(t)
 }
 
 // setLastActionAt triggers a sync if the duration between now and the next sync is longer
 // than the auto-sync interval.
 func (ws *workspace) setLastActionAt(t time.Time) {
-	ws.lastActionAt = t
-	if !ws.isSyncing && ws.nextSyncAt.Sub(time.Now()) > autoSyncInterval {
+	ws.lastActionAt.set(t)
+	if !ws.isSyncing && ws.nextSyncAt.get().Sub(time.Now()) > autoSyncInterval {
 		ws.manualSync <- struct{}{}
 	}
 }
@@ -128,13 +130,13 @@ func (ws *workspace) manageSyncs() {
 		select {
 		case now := <-ws.autoSyncTimer.C:
 			ws.sync()
-			sinceLastAct := now.Sub(ws.lastActionAt)
+			sinceLastAct := now.Sub(ws.lastActionAt.get())
 			nextInterval := autoSyncInterval
 			if sinceLastAct > autoSyncInterval {
 				nextInterval = sinceLastAct
 			}
 			ws.autoSyncTimer.Reset(nextInterval)
-			ws.nextSyncAt = now.Add(nextInterval)
+			ws.nextSyncAt.set(now.Add(nextInterval))
 		case <-ws.manualSync:
 			// Stop the auto sync timer or drain the channel if we didn't stop it in time.
 			if !ws.autoSyncTimer.Stop() {
@@ -142,7 +144,7 @@ func (ws *workspace) manageSyncs() {
 			}
 			ws.sync()
 			ws.autoSyncTimer.Reset(autoSyncInterval)
-			ws.nextSyncAt = time.Now().Add(autoSyncInterval)
+			ws.nextSyncAt.set(time.Now().Add(autoSyncInterval))
 		}
 	}
 }
@@ -166,19 +168,19 @@ func (ws *workspace) manageSaves() {
 	for {
 		select {
 		case now := <-ws.autoSaveTimer.C:
-			if ws.lastEditAt.IsZero() {
+			if ws.lastEditAt.get().IsZero() {
 				break
 			}
 			for i := range ws.tabs {
 				if ws.tabs[i].isDirty() {
-					ws.tabs[i].isSaving = true
+					ws.tabs[i].isSaving.set(true)
 					saves.pushBack(saveDocRequest{
 						id:   ws.tabs[i].id,
 						data: ws.tabs[i].view.Editor.Text(),
 					})
 				}
 			}
-			sinceLastEdit := now.Sub(ws.lastEditAt)
+			sinceLastEdit := now.Sub(ws.lastEditAt.get())
 			if sinceLastEdit < autoSaveInterval {
 				ws.autoSaveTimer.Reset(autoSaveInterval)
 			}
@@ -204,8 +206,9 @@ func (ws *workspace) tabByID(id lockbook.FileID) *tab {
 
 func (ws *workspace) doneSavingID(id lockbook.FileID) {
 	if t := ws.tabByID(id); t != nil {
-		t.lastSave = time.Now()
-		t.isSaving = false
+		t.lastSave.set(time.Now())
+		t.isSaving.set(false)
+		ws.invalidate()
 	}
 }
 
