@@ -1,5 +1,6 @@
 .task
 target
 lockbook_core.h
+lbgui/lbgui
 lbcli/lbcli
 lbedit/lbedit
