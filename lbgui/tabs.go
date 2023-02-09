@@ -23,19 +23,19 @@ type tab struct {
 	view           mdedit.View
 	isLoading      bool
 	numQueuedSaves uint8
-	lastEdit       sharedValue[time.Time]
-	lastSave       sharedValue[time.Time]
+	lastEdit       time.Time
+	lastSave       time.Time
 }
 
 func (t *tab) isDirty() bool {
-	return t.lastSave.get().Before(t.lastEdit.get())
+	return t.lastSave.Before(t.lastEdit)
 }
 
 func (ws *workspace) layMarkdownTab(gtx C, th *material.Theme, t *tab) D {
 	defer func() {
 		if t.view.Editor.HasChanged() {
 			ws.setLastEditAt(gtx.Now)
-			t.lastEdit.set(gtx.Now)
+			t.lastEdit = gtx.Now
 		}
 	}()
 	if t.view.Editor.SaveRequested() && t.isDirty() {
@@ -131,10 +131,8 @@ func (ws *workspace) insertTab(id lockbook.FileID, name string) {
 	}
 	copy(ws.tabs[ws.activeTab+1:], ws.tabs[ws.activeTab:])
 	t := tab{
-		id:       id,
-		name:     name,
-		lastEdit: newSharedValue(time.Time{}),
-		lastSave: newSharedValue(time.Time{}),
+		id:   id,
+		name: name,
 	}
 	t.view.Mode = mdedit.ViewModeSingle
 	t.view.SingleWidget = mdedit.SingleViewEditor

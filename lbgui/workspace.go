@@ -54,12 +54,14 @@ type (
 		data []byte
 		err  error
 	}
+	autoSaveScan  struct{}
 	queuedSave    struct{ id lockbook.FileID }
 	completedSave struct{ id lockbook.FileID }
 )
 
 func (openDirResult) implsWsUpdate()  {}
 func (openFileResult) implsWsUpdate() {}
+func (autoSaveScan) implsWsUpdate()   {}
 func (queuedSave) implsWsUpdate()     {}
 func (completedSave) implsWsUpdate()  {}
 
@@ -77,8 +79,9 @@ type workspace struct {
 	modals     []modal
 	modalCatch gesture.Click
 
+	saveQueue     queue[saveDocRequest]
 	lastActionAt  sharedValue[time.Time]
-	lastEditAt    sharedValue[time.Time]
+	lastEditAt    time.Time
 	nextSyncAt    sharedValue[time.Time]
 	autoSaveTimer *time.Timer
 	autoSyncTimer *time.Timer
@@ -93,8 +96,8 @@ func newWorkspace(updates chan<- legitUpdate, h handoffToWorkspace) workspace {
 		updates:       updates,
 		animPct:       1,
 		modals:        make([]modal, 0, 3),
+		saveQueue:     newQueueWithCapacity[saveDocRequest](8),
 		lastActionAt:  newSharedValue(time.Now()),
-		lastEditAt:    newSharedValue(time.Time{}),
 		nextSyncAt:    newSharedValue(time.Time{}),
 		autoSaveTimer: time.NewTimer(autoSaveInterval),
 		autoSyncTimer: time.NewTimer(autoSyncInterval),
@@ -113,11 +116,11 @@ func newWorkspace(updates chan<- legitUpdate, h handoffToWorkspace) workspace {
 // setLastEditAt resets the auto-save timer if the duration between now and the edit
 // before this one is longer than the auto-save interval.
 func (ws *workspace) setLastEditAt(t time.Time) {
-	sinceLastEdit := time.Now().Sub(ws.lastEditAt.get())
+	sinceLastEdit := time.Now().Sub(ws.lastEditAt)
 	if sinceLastEdit > autoSaveInterval {
 		ws.autoSaveTimer.Reset(autoSaveInterval)
 	}
-	ws.lastEditAt.set(t)
+	ws.lastEditAt = t
 }
 
 // setLastActionAt triggers a sync if the duration between now and the next sync is longer
@@ -154,41 +157,25 @@ func (ws *workspace) manageSyncs() {
 }
 
 func (ws *workspace) manageSaves() {
-	saves := newQueueWithCapacity[saveDocRequest](8)
 	// All save requests are taken out of a queue by this single go routine. This is
 	// instead of using a channel which would require a goroutine per save request to
 	// ensure sending subsequent ones would not block.
 	go func() {
 		for {
-			r := saves.popFront()
+			r := ws.saveQueue.popFront()
 			if err := ws.core.WriteDocument(r.id, r.data); err != nil {
 				log.Printf("saving %s: %v", r.id, err) // todo(steve): needs to get to the ui
 			}
-			ws.updates <- completedSave{id}
+			ws.updates <- completedSave{r.id}
 		}
 	}()
 	// Wait for either the auto-save timer to fire or for a manual save.
 	for {
 		select {
-		case now := <-ws.autoSaveTimer.C:
-			if ws.lastEditAt.get().IsZero() {
-				break
-			}
-			for i := range ws.tabs {
-				if ws.tabs[i].isDirty() {
-					ws.updates <- queuedSave{ws.tabs[i].id}
-					saves.pushBack(saveDocRequest{
-						id:   ws.tabs[i].id,
-						data: ws.tabs[i].view.Editor.Text(),
-					})
-				}
-			}
-			sinceLastEdit := now.Sub(ws.lastEditAt.get())
-			if sinceLastEdit < autoSaveInterval {
-				ws.autoSaveTimer.Reset(autoSaveInterval)
-			}
+		case <-ws.autoSaveTimer.C:
+			ws.updates <- autoSaveScan{}
 		case req := <-ws.manualSave:
-			saves.pushBack(req)
+			ws.saveQueue.pushBack(req)
 		}
 	}
 }
@@ -237,13 +224,30 @@ func (ws *workspace) handleUpdate(u wsUpdate) {
 		} else {
 			ws.setTabMarkdown(u.id, u.data)
 		}
+	case autoSaveScan:
+		if ws.lastEditAt.IsZero() {
+			break
+		}
+		for i := range ws.tabs {
+			if ws.tabs[i].isDirty() {
+				ws.manualSave <- saveDocRequest{
+					id:   ws.tabs[i].id,
+					data: ws.tabs[i].view.Editor.Text(),
+				}
+				ws.tabs[i].numQueuedSaves++
+			}
+		}
+		sinceLastEdit := time.Now().Sub(ws.lastEditAt)
+		if sinceLastEdit < autoSaveInterval {
+			ws.autoSaveTimer.Reset(autoSaveInterval)
+		}
 	case queuedSave:
 		if t := ws.tabByID(u.id); t != nil {
 			t.numQueuedSaves++
 		}
 	case completedSave:
 		if t := ws.tabByID(u.id); t != nil {
-			t.lastSave.set(time.Now())
+			t.lastSave = time.Now()
 			t.numQueuedSaves--
 		}
 	}
