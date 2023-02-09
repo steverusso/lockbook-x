@@ -61,6 +61,13 @@ type (
 		err  error
 		when time.Time
 	}
+	startSync  struct{ typ syncType }
+	syncResult struct {
+		typ       syncType
+		newStatus string
+		statusErr error
+		syncErr   error
+	}
 )
 
 func (openDirResult) implsWsUpdate()  {}
@@ -68,6 +75,15 @@ func (openFileResult) implsWsUpdate() {}
 func (autoSaveScan) implsWsUpdate()   {}
 func (queuedSave) implsWsUpdate()     {}
 func (completedSave) implsWsUpdate()  {}
+func (startSync) implsWsUpdate()      {}
+func (syncResult) implsWsUpdate()     {}
+
+type syncType uint8
+
+const (
+	syncTypeAuto syncType = iota
+	syncTypeManual
+)
 
 type workspace struct {
 	core       lockbook.Core
@@ -84,9 +100,9 @@ type workspace struct {
 	modalCatch gesture.Click
 
 	saveQueue     queue[saveDocRequest]
-	lastActionAt  sharedValue[time.Time]
+	lastActionAt  time.Time
 	lastEditAt    time.Time
-	nextSyncAt    sharedValue[time.Time]
+	nextSyncAt    time.Time
 	autoSaveTimer *time.Timer
 	autoSyncTimer *time.Timer
 	manualSave    chan saveDocRequest
@@ -101,8 +117,7 @@ func newWorkspace(updates chan<- legitUpdate, h handoffToWorkspace) workspace {
 		animPct:       1,
 		modals:        make([]modal, 0, 3),
 		saveQueue:     newQueueWithCapacity[saveDocRequest](8),
-		lastActionAt:  newSharedValue(time.Now()),
-		nextSyncAt:    newSharedValue(time.Time{}),
+		lastActionAt:  time.Now(),
 		autoSaveTimer: time.NewTimer(autoSaveInterval),
 		autoSyncTimer: time.NewTimer(autoSyncInterval),
 		manualSave:    make(chan saveDocRequest),
@@ -125,13 +140,14 @@ func (ws *workspace) setLastEditAt(t time.Time) {
 		ws.autoSaveTimer.Reset(autoSaveInterval)
 	}
 	ws.lastEditAt = t
+	ws.lastActionAt = t
 }
 
 // setLastActionAt triggers a sync if the duration between now and the next sync is longer
 // than the auto-sync interval.
 func (ws *workspace) setLastActionAt(t time.Time) {
-	ws.lastActionAt.set(t)
-	if !ws.isSyncing && ws.nextSyncAt.get().Sub(time.Now()) > autoSyncInterval {
+	ws.lastActionAt = t
+	if !ws.isSyncing && ws.nextSyncAt.Sub(time.Now()) > autoSyncInterval {
 		ws.manualSync <- struct{}{}
 	}
 }
@@ -139,23 +155,10 @@ func (ws *workspace) setLastActionAt(t time.Time) {
 func (ws *workspace) manageSyncs() {
 	for {
 		select {
-		case now := <-ws.autoSyncTimer.C:
-			ws.sync()
-			sinceLastAct := now.Sub(ws.lastActionAt.get())
-			nextInterval := autoSyncInterval
-			if sinceLastAct > autoSyncInterval {
-				nextInterval = sinceLastAct
-			}
-			ws.autoSyncTimer.Reset(nextInterval)
-			ws.nextSyncAt.set(now.Add(nextInterval))
+		case <-ws.autoSyncTimer.C:
+			ws.updates <- startSync{syncTypeAuto}
 		case <-ws.manualSync:
-			// Stop the auto sync timer or drain the channel if we didn't stop it in time.
-			if !ws.autoSyncTimer.Stop() {
-				<-ws.autoSyncTimer.C
-			}
-			ws.sync()
-			ws.autoSyncTimer.Reset(autoSyncInterval)
-			ws.nextSyncAt.set(time.Now().Add(autoSyncInterval))
+			ws.updates <- startSync{syncTypeManual}
 		}
 	}
 }
@@ -197,20 +200,20 @@ func (ws *workspace) tabByID(id lockbook.FileID) *tab {
 	return nil
 }
 
-func (ws *workspace) sync() {
-	ws.isSyncing = true
-	defer func() { ws.isSyncing = false }()
+func (ws *workspace) sync(typ syncType) {
+	r := syncResult{typ: typ}
+	defer func() { ws.updates <- r }()
 
 	if err := ws.core.SyncAll(nil); err != nil {
-		ws.bgErrs = append(ws.bgErrs, fmt.Errorf("syncing: %w", err))
+		r.syncErr = fmt.Errorf("syncing: %w", err)
+		return
 	}
 	lastSynced, err := ws.core.GetLastSyncedHumanString()
 	if err != nil {
-		ws.bgErrs = append(ws.bgErrs, fmt.Errorf("getting last synced: %w", err))
+		r.statusErr = fmt.Errorf("getting last synced: %w", err)
 	} else {
-		ws.botStatus = "Synced " + lastSynced
+		r.newStatus = "Synced " + lastSynced
 	}
-	ws.invalidate()
 }
 
 func (ws *workspace) handleUpdate(u wsUpdate) {
@@ -256,6 +259,42 @@ func (ws *workspace) handleUpdate(u wsUpdate) {
 			t.lastSave = u.when
 			t.numQueuedSaves--
 		}
+	case startSync:
+		if ws.isSyncing {
+			break
+		}
+		// If this is a manual sync, stop the auto sync timer or drain the channel if we
+		// didn't stop it in time.
+		if u.typ == syncTypeManual && !ws.autoSyncTimer.Stop() {
+			<-ws.autoSyncTimer.C
+		}
+		ws.isSyncing = true
+		go ws.sync(u.typ)
+	case syncResult:
+		if u.syncErr != nil {
+			ws.bgErrs = append(ws.bgErrs, u.syncErr)
+		}
+		if u.statusErr != nil {
+			ws.bgErrs = append(ws.bgErrs, u.statusErr)
+		}
+		if u.newStatus != "" {
+			ws.botStatus = u.newStatus
+		}
+		switch u.typ {
+		case syncTypeAuto:
+			now := time.Now()
+			sinceLastAct := now.Sub(ws.lastActionAt)
+			nextInterval := autoSyncInterval
+			if sinceLastAct > autoSyncInterval {
+				nextInterval = sinceLastAct
+			}
+			ws.autoSyncTimer.Reset(nextInterval)
+			ws.nextSyncAt = now.Add(nextInterval)
+		case syncTypeManual:
+			ws.autoSyncTimer.Reset(autoSyncInterval)
+			ws.nextSyncAt = time.Now().Add(autoSyncInterval)
+		}
+		ws.isSyncing = false
 	}
 }
 
