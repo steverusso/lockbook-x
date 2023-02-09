@@ -56,7 +56,11 @@ type (
 	}
 	autoSaveScan  struct{}
 	queuedSave    struct{ id lockbook.FileID }
-	completedSave struct{ id lockbook.FileID }
+	completedSave struct {
+		id   lockbook.FileID
+		err  error
+		when time.Time
+	}
 )
 
 func (openDirResult) implsWsUpdate()  {}
@@ -163,10 +167,9 @@ func (ws *workspace) manageSaves() {
 	go func() {
 		for {
 			r := ws.saveQueue.popFront()
-			if err := ws.core.WriteDocument(r.id, r.data); err != nil {
-				log.Printf("saving %s: %v", r.id, err) // todo(steve): needs to get to the ui
-			}
-			ws.updates <- completedSave{r.id}
+			err := ws.core.WriteDocument(r.id, r.data)
+			now := time.Now()
+			ws.updates <- completedSave{r.id, err, now}
 		}
 	}()
 	// Wait for either the auto-save timer to fire or for a manual save.
@@ -246,8 +249,11 @@ func (ws *workspace) handleUpdate(u wsUpdate) {
 			t.numQueuedSaves++
 		}
 	case completedSave:
+		if u.err != nil {
+			log.Printf("saving %s: %v", u.id, u.err) // todo(steve): needs to get to the ui
+		}
 		if t := ws.tabByID(u.id); t != nil {
-			t.lastSave = time.Now()
+			t.lastSave = u.when
 			t.numQueuedSaves--
 		}
 	}
