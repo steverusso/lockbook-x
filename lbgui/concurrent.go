@@ -39,27 +39,3 @@ func (q *queue[T]) popFront() T {
 	q.items = q.items[:len(q.items)-1]
 	return r
 }
-
-type sharedValue[T any] struct {
-	v  T
-	rw *sync.RWMutex
-}
-
-func newSharedValue[T any](init T) sharedValue[T] {
-	return sharedValue[T]{
-		v:  init,
-		rw: &sync.RWMutex{},
-	}
-}
-
-func (sv *sharedValue[T]) get() T {
-	sv.rw.RLock()
-	defer sv.rw.RUnlock()
-	return sv.v
-}
-
-func (sv *sharedValue[T]) set(newVal T) {
-	sv.rw.Lock()
-	sv.v = newVal
-	sv.rw.Unlock()
-}

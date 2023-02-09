@@ -40,6 +40,13 @@ func (s *wsAnimStage) reverse() {
 	}
 }
 
+type syncType uint8
+
+const (
+	syncTypeAuto syncType = iota
+	syncTypeManual
+)
+
 type (
 	wsUpdate interface{ implsWsUpdate() }
 
@@ -78,13 +85,6 @@ func (completedSave) implsWsUpdate()  {}
 func (startSync) implsWsUpdate()      {}
 func (syncResult) implsWsUpdate()     {}
 
-type syncType uint8
-
-const (
-	syncTypeAuto syncType = iota
-	syncTypeManual
-)
-
 type workspace struct {
 	core       lockbook.Core
 	updates    chan<- legitUpdate
@@ -99,13 +99,13 @@ type workspace struct {
 	modals     []modal
 	modalCatch gesture.Click
 
-	saveQueue     queue[saveDocRequest]
+	saveQueue     queue[saveRequest]
 	lastActionAt  time.Time
 	lastEditAt    time.Time
 	nextSyncAt    time.Time
 	autoSaveTimer *time.Timer
 	autoSyncTimer *time.Timer
-	manualSave    chan saveDocRequest
+	manualSave    chan saveRequest
 	manualSync    chan struct{}
 	isSyncing     bool
 }
@@ -116,11 +116,11 @@ func newWorkspace(updates chan<- legitUpdate, h handoffToWorkspace) workspace {
 		updates:       updates,
 		animPct:       1,
 		modals:        make([]modal, 0, 3),
-		saveQueue:     newQueueWithCapacity[saveDocRequest](8),
+		saveQueue:     newQueueWithCapacity[saveRequest](8),
 		lastActionAt:  time.Now(),
 		autoSaveTimer: time.NewTimer(autoSaveInterval),
 		autoSyncTimer: time.NewTimer(autoSyncInterval),
-		manualSave:    make(chan saveDocRequest),
+		manualSave:    make(chan saveRequest),
 		manualSync:    make(chan struct{}),
 	}
 	ws.tabList.Axis = layout.Vertical
@@ -186,7 +186,7 @@ func (ws *workspace) manageSaves() {
 	}
 }
 
-type saveDocRequest struct {
+type saveRequest struct {
 	id   lockbook.FileID
 	data []byte
 }
@@ -236,7 +236,7 @@ func (ws *workspace) handleUpdate(u wsUpdate) {
 		}
 		for i := range ws.tabs {
 			if ws.tabs[i].isDirty() {
-				ws.manualSave <- saveDocRequest{
+				ws.manualSave <- saveRequest{
 					id:   ws.tabs[i].id,
 					data: ws.tabs[i].view.Editor.Text(),
 				}
@@ -271,31 +271,35 @@ func (ws *workspace) handleUpdate(u wsUpdate) {
 		ws.isSyncing = true
 		go ws.sync(u.typ)
 	case syncResult:
-		if u.syncErr != nil {
-			ws.bgErrs = append(ws.bgErrs, u.syncErr)
-		}
-		if u.statusErr != nil {
-			ws.bgErrs = append(ws.bgErrs, u.statusErr)
-		}
-		if u.newStatus != "" {
-			ws.botStatus = u.newStatus
-		}
-		switch u.typ {
-		case syncTypeAuto:
-			now := time.Now()
-			sinceLastAct := now.Sub(ws.lastActionAt)
-			nextInterval := autoSyncInterval
-			if sinceLastAct > autoSyncInterval {
-				nextInterval = sinceLastAct
-			}
-			ws.autoSyncTimer.Reset(nextInterval)
-			ws.nextSyncAt = now.Add(nextInterval)
-		case syncTypeManual:
-			ws.autoSyncTimer.Reset(autoSyncInterval)
-			ws.nextSyncAt = time.Now().Add(autoSyncInterval)
-		}
-		ws.isSyncing = false
+		ws.handleSyncResult(u)
 	}
+}
+
+func (ws *workspace) handleSyncResult(sr syncResult) {
+	if sr.syncErr != nil {
+		ws.bgErrs = append(ws.bgErrs, sr.syncErr)
+	}
+	if sr.statusErr != nil {
+		ws.bgErrs = append(ws.bgErrs, sr.statusErr)
+	}
+	if sr.newStatus != "" {
+		ws.botStatus = sr.newStatus
+	}
+	switch sr.typ {
+	case syncTypeAuto:
+		now := time.Now()
+		sinceLastAct := now.Sub(ws.lastActionAt)
+		nextInterval := autoSyncInterval
+		if sinceLastAct > autoSyncInterval {
+			nextInterval = sinceLastAct
+		}
+		ws.autoSyncTimer.Reset(nextInterval)
+		ws.nextSyncAt = now.Add(nextInterval)
+	case syncTypeManual:
+		ws.autoSyncTimer.Reset(autoSyncInterval)
+		ws.nextSyncAt = time.Now().Add(autoSyncInterval)
+	}
+	ws.isSyncing = false
 }
 
 func (ws *workspace) layout(gtx C, th *material.Theme) D {

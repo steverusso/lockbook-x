@@ -92,6 +92,9 @@ func (lb *legitbook) frame(gtx C) {
 }
 
 func (lb *legitbook) handleKeyEvent(gtx C, e key.Event) {
+	if lb.screen != showWorkspace {
+		return
+	}
 	if e.Modifiers == key.ModAlt && e.Name == "F" && len(lb.work.tabs) > 0 {
 		lb.work.animStage.reverse()
 		return

@@ -40,7 +40,7 @@ func (ws *workspace) layMarkdownTab(gtx C, th *material.Theme, t *tab) D {
 	}()
 	if t.view.Editor.SaveRequested() && t.isDirty() {
 		t.numQueuedSaves++
-		ws.manualSave <- saveDocRequest{
+		ws.manualSave <- saveRequest{
 			id:   t.id,
 			data: t.view.Editor.Text(),
 		}
