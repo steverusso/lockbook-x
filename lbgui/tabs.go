@@ -17,14 +17,14 @@ import (
 )
 
 type tab struct {
-	id        lockbook.FileID
-	name      string
-	btn       widget.Clickable
-	view      mdedit.View
-	isLoading bool
-	isSaving  sharedValue[bool]
-	lastEdit  sharedValue[time.Time]
-	lastSave  sharedValue[time.Time]
+	id             lockbook.FileID
+	name           string
+	btn            widget.Clickable
+	view           mdedit.View
+	isLoading      bool
+	numQueuedSaves uint8
+	lastEdit       sharedValue[time.Time]
+	lastSave       sharedValue[time.Time]
 }
 
 func (t *tab) isDirty() bool {
@@ -39,13 +39,13 @@ func (ws *workspace) layMarkdownTab(gtx C, th *material.Theme, t *tab) D {
 		}
 	}()
 	if t.view.Editor.SaveRequested() && t.isDirty() {
-		t.isSaving.set(true)
+		t.numQueuedSaves++
 		ws.manualSave <- saveDocRequest{
 			id:   t.id,
 			data: t.view.Editor.Text(),
 		}
 	}
-	if t.isSaving.get() {
+	if t.numQueuedSaves > 0 {
 		layout.NE.Layout(gtx, func(gtx C) D {
 			return material.Loader(th).Layout(gtx)
 		})
@@ -133,7 +133,6 @@ func (ws *workspace) insertTab(id lockbook.FileID, name string) {
 	t := tab{
 		id:       id,
 		name:     name,
-		isSaving: newSharedValue(false),
 		lastEdit: newSharedValue(time.Time{}),
 		lastSave: newSharedValue(time.Time{}),
 	}

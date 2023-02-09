@@ -54,10 +54,14 @@ type (
 		data []byte
 		err  error
 	}
+	queuedSave    struct{ id lockbook.FileID }
+	completedSave struct{ id lockbook.FileID }
 )
 
 func (openDirResult) implsWsUpdate()  {}
 func (openFileResult) implsWsUpdate() {}
+func (queuedSave) implsWsUpdate()     {}
+func (completedSave) implsWsUpdate()  {}
 
 type workspace struct {
 	core       lockbook.Core
@@ -160,8 +164,7 @@ func (ws *workspace) manageSaves() {
 			if err := ws.core.WriteDocument(r.id, r.data); err != nil {
 				log.Printf("saving %s: %v", r.id, err) // todo(steve): needs to get to the ui
 			}
-			ws.doneSavingID(r.id)
-			ws.invalidate()
+			ws.updates <- completedSave{id}
 		}
 	}()
 	// Wait for either the auto-save timer to fire or for a manual save.
@@ -173,7 +176,7 @@ func (ws *workspace) manageSaves() {
 			}
 			for i := range ws.tabs {
 				if ws.tabs[i].isDirty() {
-					ws.tabs[i].isSaving.set(true)
+					ws.updates <- queuedSave{ws.tabs[i].id}
 					saves.pushBack(saveDocRequest{
 						id:   ws.tabs[i].id,
 						data: ws.tabs[i].view.Editor.Text(),
@@ -202,14 +205,6 @@ func (ws *workspace) tabByID(id lockbook.FileID) *tab {
 		}
 	}
 	return nil
-}
-
-func (ws *workspace) doneSavingID(id lockbook.FileID) {
-	if t := ws.tabByID(id); t != nil {
-		t.lastSave.set(time.Now())
-		t.isSaving.set(false)
-		ws.invalidate()
-	}
 }
 
 func (ws *workspace) sync() {
@@ -241,6 +236,15 @@ func (ws *workspace) handleUpdate(u wsUpdate) {
 			log.Printf("error: %v", u.err)
 		} else {
 			ws.setTabMarkdown(u.id, u.data)
+		}
+	case queuedSave:
+		if t := ws.tabByID(u.id); t != nil {
+			t.numQueuedSaves++
+		}
+	case completedSave:
+		if t := ws.tabByID(u.id); t != nil {
+			t.lastSave.set(time.Now())
+			t.numQueuedSaves--
 		}
 	}
 }
