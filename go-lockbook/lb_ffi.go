@@ -474,8 +474,9 @@ func goFileResult(r C.LbFileResult) (File, error) {
 		defer C.lb_error_free(r.err)
 		return File{}, newErrorFromC(r.err)
 	}
-	defer C.lb_file_free(r.ok)
-	return newFileFromC(&r.ok), nil
+	f := newFileFromC(&r.ok)
+	C.lb_file_free(r.ok)
+	return f, nil
 }
 
 func goFileListResult(r C.LbFileListResult) ([]File, error) {
