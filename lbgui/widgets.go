@@ -16,16 +16,11 @@ import (
 )
 
 var (
-	iconDirectory  = mustIcon(icons.FileFolderOpen)
-	iconEdit       = mustIcon(icons.EditorModeEdit)
-	iconHome       = mustIcon(icons.ActionHome)
-	iconNewDoc     = mustIcon(icons.ActionNoteAdd)
-	iconNewFolder  = mustIcon(icons.FileCreateNewFolder)
-	iconReader     = mustIcon(icons.ActionChromeReaderMode)
-	iconRegFile    = mustIcon(icons.ActionDescription)
-	iconVisibility = mustIcon(icons.ActionVisibility)
-	iconUnknown    = mustIcon(icons.ContentBlock)
-	iconWebAsset   = mustIcon(icons.AVWebAsset)
+	iconDirectory = mustIcon(icons.FileFolderOpen)
+	iconHome      = mustIcon(icons.ActionHome)
+	iconNewDoc    = mustIcon(icons.ActionNoteAdd)
+	iconNewFolder = mustIcon(icons.FileCreateNewFolder)
+	iconRegFile   = mustIcon(icons.ActionDescription)
 )
 
 // mustIcon returns a new `widget.Icon` for the given byte slice. It panics on error.

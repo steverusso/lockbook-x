@@ -286,14 +286,12 @@ func (ws *workspace) openFiles(namesAndIDs []nameAndID) {
 
 func openFile(core lockbook.Core, updates chan<- legitUpdate, id lockbook.FileID) {
 	u := openFileResult{id: id}
-	defer func() { updates <- u }()
 
-	data, err := core.ReadDocument(id)
-	if err != nil {
-		u.err = fmt.Errorf("reading doc %q: %w", id, err)
-		return
+	u.data, u.err = core.ReadDocument(id)
+	if u.err != nil {
+		u.err = fmt.Errorf("reading doc %q: %w", id, u.err)
 	}
-	u.data = data
+	updates <- u
 }
 
 func (ws *workspace) deleteSelectedFiles() {

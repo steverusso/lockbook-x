@@ -464,7 +464,3 @@ func (ws *workspace) layCreateFilePrompt(gtx C, th *material.Theme, p *createFil
 		return dims
 	})
 }
-
-func (ws *workspace) invalidate() {
-	ws.updates <- nil
-}
