@@ -16,12 +16,12 @@ tasks:
       - go build {{.GO_LDFLAGS}}
       - task: go-lint
 
-  lbedit:
-    dir: lbedit
+  lbgui:
+    dir: lbgui
     cmds:
       - task: c-ffi-v2
       - task: go-fmt
-      - go build {{.GO_LDFLAGS}}
+      - go build -tags noopengl {{.GO_LDFLAGS}}
       - task: go-lint
 
   go-fmt:
