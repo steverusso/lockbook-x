@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"gioui.org/layout"
 	"gioui.org/widget/material"
@@ -19,16 +18,20 @@ type splashScreen struct {
 	errMsg  string
 }
 
-type splashWorkStep int
+type handoffToOnboard struct {
+	core lockbook.Core
+}
 
-const (
-	splashInit splashWorkStep = iota
-	splashOpenCore
-	splashCheckForAccount
-	splashSync
-	splashGetRootFiles
-	splashGetLastSynced
-)
+type handoffToWorkspace struct {
+	core       lockbook.Core
+	lastSynced string
+	rootFiles  []lockbook.File
+	errs       []error
+}
+
+type setSplashErr struct {
+	msg string
+}
 
 func (s *splashScreen) layout(gtx C, th *material.Theme) D {
 	var lbl material.LabelStyle
@@ -36,42 +39,18 @@ func (s *splashScreen) layout(gtx C, th *material.Theme) D {
 		lbl = material.Body1(th, s.errMsg)
 		lbl.Color = color.NRGBA{255, 10, 10, 255}
 	} else {
-		lbl = material.Body1(th, s.status)
+		lbl = material.Body1(th, "Initializing...")
 	}
 	return layout.Center.Layout(gtx, lbl.Layout)
 }
 
-func (s *splashScreen) setStep(step splashWorkStep) {
-	switch step {
-	case splashInit:
-		s.status = "Initializing..."
-	case splashOpenCore:
-		s.status = "Loading core..."
-	case splashCheckForAccount:
-		s.status = "Checking for account..."
-	case splashSync:
-		s.status = "Syncing..."
-	case splashGetRootFiles:
-		s.status = "Getting root children..."
-	case splashGetLastSynced:
-		s.status = "Getting last synced..."
-	default:
-		s.status = "splashWorkStep(" + strconv.FormatInt(int64(step), 10) + ")"
-	}
-	s.invalidate()
-}
-
 func (s *splashScreen) setError(ctx string, err error) {
-	s.errMsg = fmt.Sprintf("error: %s: %s", ctx, err.Error())
-	s.invalidate()
-}
-
-func (s *splashScreen) invalidate() {
-	s.updates <- nil
+	s.updates <- setSplashErr{
+		msg: fmt.Sprintf("error: %s: %s", ctx, err.Error()),
+	}
 }
 
 func (s *splashScreen) doStartupWork() {
-	s.setStep(splashOpenCore)
 	dir := getDataDir()
 	core, err := lockbook.NewCore(dir)
 	if err != nil {
@@ -80,7 +59,6 @@ func (s *splashScreen) doStartupWork() {
 	}
 	// Determine whether we're going to the onboard screen or the workspace by checking
 	// for an account.
-	s.setStep(splashCheckForAccount)
 	if _, err = core.GetAccount(); err != nil {
 		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeNoAccount {
 			s.updates <- handoffToOnboard{core: core}
@@ -92,12 +70,10 @@ func (s *splashScreen) doStartupWork() {
 	// Gather the errors that shouldn't prohibit the user from getting to their workspace.
 	errs := []error{}
 
-	s.setStep(splashSync)
 	if err = core.SyncAll(nil); err != nil {
 		errs = append(errs, fmt.Errorf("performing sync on open: %s", err))
 	}
 
-	s.setStep(splashGetRootFiles)
 	root, err := core.GetRoot()
 	if err != nil {
 		s.setError("getting root", err)
@@ -110,7 +86,6 @@ func (s *splashScreen) doStartupWork() {
 	}
 	lockbook.SortFiles(rootFiles)
 
-	s.setStep(splashGetLastSynced)
 	lastSynced, err := core.GetLastSyncedHumanString()
 	if err != nil {
 		errs = append(errs, fmt.Errorf("getting last synced: %s", err))

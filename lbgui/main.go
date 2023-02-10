@@ -27,7 +27,6 @@ import (
 	"github.com/steverusso/gio-fonts/nunito/nunitobolditalic"
 	"github.com/steverusso/gio-fonts/nunito/nunitoitalic"
 	"github.com/steverusso/gio-fonts/nunito/nunitoregular"
-	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
 type (
@@ -135,17 +134,6 @@ func (lb *legitbook) handleTabsEvent(gtx C, e key.Event) {
 	}
 }
 
-type handoffToOnboard struct {
-	core lockbook.Core
-}
-
-type handoffToWorkspace struct {
-	core       lockbook.Core
-	lastSynced string
-	rootFiles  []lockbook.File
-	errs       []error
-}
-
 func run() error {
 	win := app.NewWindow(
 		app.Size(1050, 680),
@@ -185,6 +173,8 @@ func run() error {
 		select {
 		case u := <-lb.updates:
 			switch u := u.(type) {
+			case setSplashErr:
+				lb.splash.errMsg = u.msg
 			case handoffToWorkspace:
 				lb.work = newWorkspace(lb.updates, u)
 				lb.screen = showWorkspace
