@@ -105,7 +105,6 @@ type workspace struct {
 	nextSyncAt    time.Time
 	autoSaveTimer *time.Timer
 	autoSyncTimer *time.Timer
-	manualSave    chan saveRequest
 	manualSync    chan struct{}
 	isSyncing     bool
 }
@@ -120,7 +119,6 @@ func newWorkspace(updates chan<- legitUpdate, h handoffToWorkspace) workspace {
 		lastActionAt:  time.Now(),
 		autoSaveTimer: time.NewTimer(autoSaveInterval),
 		autoSyncTimer: time.NewTimer(autoSyncInterval),
-		manualSave:    make(chan saveRequest),
 		manualSync:    make(chan struct{}),
 	}
 	ws.tabList.Axis = layout.Vertical
@@ -164,9 +162,7 @@ func (ws *workspace) manageSyncs() {
 }
 
 func (ws *workspace) manageSaves() {
-	// All save requests are taken out of a queue by this single go routine. This is
-	// instead of using a channel which would require a goroutine per save request to
-	// ensure sending subsequent ones would not block.
+	// All save requests are taken out of the save queue by this single go routine.
 	go func() {
 		for {
 			r := ws.saveQueue.popFront()
@@ -175,14 +171,9 @@ func (ws *workspace) manageSaves() {
 			ws.updates <- completedSave{r.id, err, now}
 		}
 	}()
-	// Wait for either the auto-save timer to fire or for a manual save.
 	for {
-		select {
-		case <-ws.autoSaveTimer.C:
-			ws.updates <- autoSaveScan{}
-		case req := <-ws.manualSave:
-			ws.saveQueue.pushBack(req)
-		}
+		<-ws.autoSaveTimer.C
+		ws.updates <- autoSaveScan{}
 	}
 }
 
@@ -236,10 +227,10 @@ func (ws *workspace) handleUpdate(u wsUpdate) {
 		}
 		for i := range ws.tabs {
 			if ws.tabs[i].isDirty() {
-				ws.manualSave <- saveRequest{
+				ws.saveQueue.pushBack(saveRequest{
 					id:   ws.tabs[i].id,
 					data: ws.tabs[i].view.Editor.Text(),
-				}
+				})
 				ws.tabs[i].numQueuedSaves++
 			}
 		}
@@ -256,7 +247,7 @@ func (ws *workspace) handleUpdate(u wsUpdate) {
 			log.Printf("saving %s: %v", u.id, u.err) // todo(steve): needs to get to the ui
 		}
 		if t := ws.tabByID(u.id); t != nil {
-			t.lastSave = u.when
+			t.lastSaveAt = u.when
 			t.numQueuedSaves--
 		}
 	case startSync:

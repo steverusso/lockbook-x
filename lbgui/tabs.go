@@ -23,27 +23,27 @@ type tab struct {
 	view           mdedit.View
 	isLoading      bool
 	numQueuedSaves uint8
-	lastEdit       time.Time
-	lastSave       time.Time
+	lastEditAt     time.Time
+	lastSaveAt     time.Time
 }
 
 func (t *tab) isDirty() bool {
-	return t.lastSave.Before(t.lastEdit)
+	return t.lastSaveAt.Before(t.lastEditAt)
 }
 
 func (ws *workspace) layMarkdownTab(gtx C, th *material.Theme, t *tab) D {
 	defer func() {
 		if t.view.Editor.HasChanged() {
 			ws.setLastEditAt(gtx.Now)
-			t.lastEdit = gtx.Now
+			t.lastEditAt = gtx.Now
 		}
 	}()
 	if t.view.Editor.SaveRequested() && t.isDirty() {
-		t.numQueuedSaves++
-		ws.manualSave <- saveRequest{
+		ws.saveQueue.pushBack(saveRequest{
 			id:   t.id,
 			data: t.view.Editor.Text(),
-		}
+		})
+		t.numQueuedSaves++
 	}
 	if t.numQueuedSaves > 0 {
 		layout.NE.Layout(gtx, func(gtx C) D {
