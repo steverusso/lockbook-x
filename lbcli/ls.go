@@ -6,17 +6,17 @@ import (
 	"sort"
 
 	"github.com/steverusso/lockbook-x/go-lockbook"
-	lb "github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-type lsParams struct {
-	short     bool
-	recursive bool
-	paths     bool
-	onlyDirs  bool
-	onlyDocs  bool
-	fullIDs   bool
-	target    string
+// list files in a directory
+type lsCmd struct {
+	short     bool   `opt:"short,s" desc:"just display the name (or file path)"`
+	recursive bool   `opt:"recursive,r" desc:"recursively include all children of the target directory"`
+	paths     bool   `opt:"paths" desc:"show absolute file paths instead of file names"`
+	onlyDirs  bool   `opt:"dirs" desc:"only show folders"`
+	onlyDocs  bool   `opt:"docs" desc:"only show documents"`
+	fullIDs   bool   `opt:"ids" desc:"show full uuids instead of prefixes"`
+	target    string `arg:"target directory (defaults to root)"`
 }
 
 type lsConfig struct {
@@ -31,7 +31,7 @@ type lsConfig struct {
 }
 
 type fileNode struct {
-	id         lb.FileID
+	id         lockbook.FileID
 	dirName    string
 	name       string
 	isDir      bool
@@ -71,7 +71,7 @@ func (node *fileNode) printOut(cfg *lsConfig) {
 	}
 }
 
-func getChildren(core lb.Core, files []lb.File, parent lb.FileID, cfg *lsConfig) ([]fileNode, error) {
+func getChildren(core lockbook.Core, files []lockbook.File, parent lockbook.FileID, cfg *lsConfig) ([]fileNode, error) {
 	lockbook.SortFiles(files)
 	children := []fileNode{}
 	for i := range files {
@@ -143,12 +143,15 @@ func getChildren(core lb.Core, files []lb.File, parent lb.FileID, cfg *lsConfig)
 	return children, nil
 }
 
-func listFiles(core lb.Core, ls lsParams) error {
+func (ls *lsCmd) run(core lockbook.Core) error {
+	if ls.target == "" {
+		ls.target = "/"
+	}
 	f, err := core.FileByPath(ls.target)
 	if err != nil {
 		return fmt.Errorf("getting file by path %q: %w", ls.target, err)
 	}
-	var files []lb.File
+	var files []lockbook.File
 	{
 		var err error
 		if ls.recursive {

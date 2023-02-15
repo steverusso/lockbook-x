@@ -7,54 +7,66 @@ import (
 	"io"
 	"os"
 
-	lb "github.com/steverusso/lockbook-x/go-lockbook"
+	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-type acctInitParams struct {
-	isRestore    bool
-	isNoSync     bool
-	isWelcomeDoc bool
+// account related commands
+type acctCmd struct {
+	restore     *acctRestoreCmd
+	privkey     *acctPrivKeyCmd
+	status      *acctStatusCmd
+	subscribe   *acctSubscribeCmd
+	unsubscribe *acctUnsubscribeCmd
 }
 
-func acctInit(core lb.Core, ip acctInitParams) error {
+// restore an existing account from its secret account string
+type acctRestoreCmd struct {
+	noSync bool `opt:"no-sync" desc:"don't perform the initial sync"`
+}
+
+// print out the private key for this lockbook
+type acctPrivKeyCmd struct{}
+
+// overview of your account
+type acctStatusCmd struct{}
+
+// create a new subscription with a credit card
+type acctSubscribeCmd struct{}
+
+// cancel an existing subscription
+type acctUnsubscribeCmd struct{}
+
+// create a lockbook account
+type initCmd struct {
+	welcome bool `opt:"welcome" desc:"include the welcome document"`
+	noSync  bool `opt:"no-sync" desc:"don't perform the initial sync"`
+}
+
+func (c *initCmd) run(core lockbook.Core) error {
 	fi, err := os.Stdin.Stat()
 	if err != nil {
 		panic(err)
 	}
-	if ip.isRestore {
-		if fi.Mode()&os.ModeNamedPipe == 0 {
-			return errors.New("to restore an existing lockbook account, pipe your account string into this command, e.g.:\npbpaste | lockbook init --restore")
-		}
-		data, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return fmt.Errorf("trying to read from stdin: %w", err)
-		}
-		_, err = core.ImportAccount(string(data))
-		if err != nil {
-			return fmt.Errorf("importing account: %w", err)
-		}
-	} else {
-		if fi.Mode()&os.ModeNamedPipe != 0 {
-			return errors.New("cannot create a new account without ability to prompt for terminal input")
-		}
-		scnr := bufio.NewScanner(os.Stdin)
-		fmt.Printf("please choose a username: ")
-		if !scnr.Scan() {
-			return scnr.Err()
-		}
-		uname := scnr.Text()
-		apiURL := os.Getenv("API_URL")
-		if apiURL == "" {
-			apiURL = lb.DefaultAPILocation
-		}
-		fmt.Println("generating keys and checking for username availability...")
-		_, err = core.CreateAccount(uname, ip.isWelcomeDoc)
-		if err != nil {
-			return fmt.Errorf("creating account: %w", err)
-		}
-		fmt.Println("account created!")
+	if fi.Mode()&os.ModeNamedPipe != 0 {
+		return errors.New("cannot create a new account without ability to prompt for terminal input")
 	}
-	if !ip.isNoSync {
+	scnr := bufio.NewScanner(os.Stdin)
+	fmt.Printf("please choose a username: ")
+	if !scnr.Scan() {
+		return scnr.Err()
+	}
+	uname := scnr.Text()
+	apiURL := os.Getenv("API_URL")
+	if apiURL == "" {
+		apiURL = lockbook.DefaultAPILocation
+	}
+	fmt.Println("generating keys and checking for username availability...")
+	_, err = core.CreateAccount(uname, c.welcome)
+	if err != nil {
+		return fmt.Errorf("creating account: %w", err)
+	}
+	fmt.Println("account created!")
+	if !c.noSync {
 		fmt.Print("doing initial sync... ")
 		if err := core.SyncAll(nil); err != nil {
 			return fmt.Errorf("syncing after init: %w", err)
@@ -64,22 +76,33 @@ func acctInit(core lb.Core, ip acctInitParams) error {
 	return nil
 }
 
-func acctWhoAmI(core lb.Core, long bool) error {
-	acct, err := core.GetAccount()
+func (c *acctRestoreCmd) run(core lockbook.Core) error {
+	fi, err := os.Stdin.Stat()
 	if err != nil {
-		return fmt.Errorf("getting account: %w", err)
+		panic(err)
 	}
-	if !long {
-		fmt.Println(acct.Username)
-		return nil
+	if fi.Mode()&os.ModeNamedPipe == 0 {
+		return errors.New("to restore an existing lockbook account, pipe your account string into this command, e.g.:\npbpaste | lockbook init --restore")
 	}
-	fmt.Printf("data-dir: %s\n", core.WriteablePath())
-	fmt.Printf("username: %s\n", acct.Username)
-	fmt.Printf("server:   %s\n", acct.APIURL)
+	data, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return fmt.Errorf("trying to read from stdin: %w", err)
+	}
+	_, err = core.ImportAccount(string(data))
+	if err != nil {
+		return fmt.Errorf("importing account: %w", err)
+	}
+	if !c.noSync {
+		fmt.Print("doing initial sync... ")
+		if err := core.SyncAll(nil); err != nil {
+			return fmt.Errorf("syncing after init: %w", err)
+		}
+		fmt.Println("done")
+	}
 	return nil
 }
 
-func acctPrivKey(core lb.Core) error {
+func (acctPrivKeyCmd) run(core lockbook.Core) error {
 	acctStr, err := core.ExportAccount()
 	if err != nil {
 		return fmt.Errorf("exporting account: %w", err)
@@ -95,7 +118,7 @@ func acctPrivKey(core lb.Core) error {
 	return nil
 }
 
-func acctStatus(core lb.Core) error {
+func (acctStatusCmd) run(core lockbook.Core) error {
 	u, err := core.GetUsage()
 	if err != nil {
 		return fmt.Errorf("getting usage: %w", err)
@@ -107,10 +130,10 @@ func acctStatus(core lb.Core) error {
 	switch {
 	case info.StripeLast4 != "":
 		fmt.Printf("type: Stripe, *%s\n", info.StripeLast4)
-	case info.GooglePlay != lb.GooglePlayNone:
+	case info.GooglePlay != lockbook.GooglePlayNone:
 		fmt.Println("type: Google Play")
 		fmt.Printf("state: %s\n", info.GooglePlay)
-	case info.AppStore != lb.AppStoreNone:
+	case info.AppStore != lockbook.AppStoreNone:
 		fmt.Println("type: App Store")
 		fmt.Printf("state: %s\n", info.AppStore)
 	default:
@@ -124,7 +147,7 @@ func acctStatus(core lb.Core) error {
 	return nil
 }
 
-func acctSubscribe(core lb.Core) error {
+func (acctSubscribeCmd) run(core lockbook.Core) error {
 	fmt.Print("checking for existing card... ")
 	subInfo, err := core.GetSubscriptionInfo()
 	if err != nil {
@@ -141,9 +164,9 @@ func acctSubscribe(core lb.Core) error {
 	} else {
 		fmt.Println("no existing cards found.")
 	}
-	var card *lb.CreditCard
+	var card *lockbook.CreditCard
 	if useNewCard {
-		card := &lb.CreditCard{}
+		card := &lockbook.CreditCard{}
 		fmt.Print("enter your card number: ")
 		fmt.Scanln(&card.Number)
 		for {
@@ -172,86 +195,12 @@ func acctSubscribe(core lb.Core) error {
 	return nil
 }
 
-func acctUnsubscribe(core lb.Core) error {
+func (acctUnsubscribeCmd) run(core lockbook.Core) error {
 	fmt.Print("cancelling subscription... ")
 	err := core.CancelSubscription()
 	if err != nil {
 		return err
 	}
 	fmt.Println("done")
-	return nil
-}
-
-func acctSyncAll(core lb.Core, isVerbose bool) error {
-	var syncProgress func(lb.SyncProgress)
-	if isVerbose {
-		syncProgress = func(sp lb.SyncProgress) {
-			fmt.Printf("(%d/%d) ", sp.Progress, sp.Total)
-			cwu := sp.CurrentWorkUnit
-			switch {
-			case cwu.PullMetadata:
-				fmt.Println("pulling metadata updates...")
-			case cwu.PushMetadata:
-				fmt.Println("pushing metadata updates...")
-			case cwu.PullDocument != "":
-				fmt.Printf("pulling %s...\n", cwu.PullDocument)
-			case cwu.PushDocument != "":
-				fmt.Printf("pushing %s...\n", cwu.PushDocument)
-			}
-		}
-	}
-	err := core.SyncAll(syncProgress)
-	if err != nil {
-		fmt.Println()
-		return err
-	}
-	if isVerbose {
-		fmt.Println("done")
-	}
-	return nil
-}
-
-func acctSyncStatus(core lb.Core) error {
-	wc, err := core.CalculateWork()
-	if err != nil {
-		return fmt.Errorf("calculating work: %w", err)
-	}
-	for _, wu := range wc.WorkUnits {
-		pushOrPull := "pushed"
-		if wu.Type == lb.WorkUnitTypeServer {
-			pushOrPull = "pulled"
-		}
-		fmt.Printf("%s needs to be %s\n", wu.File.Name, pushOrPull)
-	}
-	lastSyncedAt, err := core.GetLastSyncedHumanString()
-	if err != nil {
-		return fmt.Errorf("getting last synced human string: %w", err)
-	}
-	fmt.Printf("last synced: %s\n", lastSyncedAt)
-	return nil
-}
-
-func acctUsage(core lb.Core, isExact bool) error {
-	u, err := core.GetUsage()
-	if err != nil {
-		return fmt.Errorf("getting usage: %w", err)
-	}
-	uu, err := core.GetUncompressedUsage()
-	if err != nil {
-		return fmt.Errorf("getting uncompressed usage: %w", err)
-	}
-
-	uncompressed := uu.Readable
-	serverUsage := u.ServerUsage.Readable
-	dataCap := u.DataCap.Readable
-	if isExact {
-		uncompressed = fmt.Sprintf("%d B", uu.Exact)
-		serverUsage = fmt.Sprintf("%d B", u.ServerUsage.Exact)
-		dataCap = fmt.Sprintf("%d B", u.DataCap.Exact)
-	}
-
-	fmt.Printf("uncompressed file size: %s\n", uncompressed)
-	fmt.Printf("server utilization: %s\n", serverUsage)
-	fmt.Printf("server data cap: %s\n", dataCap)
 	return nil
 }

@@ -5,13 +5,27 @@ import (
 	"os"
 	"strings"
 
-	lb "github.com/steverusso/lockbook-x/go-lockbook"
+	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-func debugFinfo(core lb.Core, target string) error {
-	id, err := idFromSomething(core, target)
+// investigative commands mainly intended for devs
+type debugCmd struct {
+	finfo    *debugFinfoCmd
+	validate *debugValidateCmd
+}
+
+// view info about a target file
+type debugFinfoCmd struct {
+	target string `arg:"the target can be a file path, uuid, or uuid prefix,required"`
+}
+
+// find invalid states within your lockbook
+type debugValidateCmd struct{}
+
+func (c *debugFinfoCmd) run(core lockbook.Core) error {
+	id, err := idFromSomething(core, c.target)
 	if err != nil {
-		return fmt.Errorf("trying to get id from %q: %w", target, err)
+		return fmt.Errorf("trying to get id from %q: %w", c.target, err)
 	}
 	f, err := core.FileByID(id)
 	if err != nil {
@@ -25,7 +39,7 @@ func debugFinfo(core lb.Core, target string) error {
 	return nil
 }
 
-func printFile(f lb.File, myName string) {
+func printFile(f lockbook.File, myName string) {
 	// Build the text that will contain share info.
 	shares := ""
 	for _, sh := range f.Shares {
@@ -44,7 +58,7 @@ func printFile(f lb.File, myName string) {
 		{"name", f.Name},
 		{"id", f.ID.String()},
 		{"parent", f.Parent.String()},
-		{"type", strings.ToLower(lb.FileTypeString(f.Type))},
+		{"type", strings.ToLower(lockbook.FileTypeString(f.Type))},
 		{"lastmod", fmt.Sprintf("%v", f.Lastmod)},
 		{"lastmod_by", f.LastmodBy},
 		{fmt.Sprintf("shares (%d)", len(f.Shares)), shares},
@@ -62,7 +76,7 @@ func printFile(f lb.File, myName string) {
 	}
 }
 
-func debugValidate(core lb.Core) error {
+func (debugValidateCmd) run(core lockbook.Core) error {
 	warnings, err := core.Validate()
 	if err != nil {
 		return fmt.Errorf("running validate: %w", err)
