@@ -8,26 +8,58 @@ import (
 	"strings"
 
 	"github.com/gofrs/uuid"
-	lb "github.com/steverusso/lockbook-x/go-lockbook"
+	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-func createShare(core lb.Core, target, toWho string, readOnly bool) error {
-	id, err := idFromSomething(core, target)
+// sharing related commands
+type shareCmd struct {
+	create  *shareCreateCmd
+	pending *sharePendingCmd
+	accept  *shareAcceptCmd
+	reject  *shareRejectCmd
+}
+
+// share a file with another lockbook user
+type shareCreateCmd struct {
+	readOnly bool   `opt:"ro" desc:"the other user will not be able to edit the file"`
+	target   string `arg:"the path or id of the lockbook file you'd like to share,required"`
+	username string `arg:"the username of the other lockbook user,required"`
+}
+
+// list pending shares
+type sharePendingCmd struct {
+	fullIDs bool `opt:"ids" desc:"print full uuids instead of prefixes"`
+}
+
+// accept a pending share
+type shareAcceptCmd struct {
+	target  string `arg:"id or id prefix of the pending share to accept,required"`
+	dest    string `arg:"where to place this in your file tree,required"`
+	newName string `arg:"name this file something else"`
+}
+
+// reject a pending share
+type shareRejectCmd struct {
+	target string `arg:"id or id prefix of a pending share,required"`
+}
+
+func (c *shareCreateCmd) run(core lockbook.Core) error {
+	id, err := idFromSomething(core, c.target)
 	if err != nil {
-		return fmt.Errorf("trying to get id from %q: %w", target, err)
+		return fmt.Errorf("trying to get id from %q: %w", c.target, err)
 	}
-	mode := lb.ShareModeWrite
-	if readOnly {
-		mode = lb.ShareModeRead
+	mode := lockbook.ShareModeWrite
+	if c.readOnly {
+		mode = lockbook.ShareModeRead
 	}
-	if err = core.ShareFile(id, toWho, mode); err != nil {
+	if err = core.ShareFile(id, c.username, mode); err != nil {
 		return fmt.Errorf("sharing file: %w", err)
 	}
 	fmt.Printf("\033[1;32mdone!\033[0m file %q will be shared next time you sync.\n", id)
 	return nil
 }
 
-func listPendingShares(core lb.Core, isFullIDs bool) error {
+func (c *sharePendingCmd) run(core lockbook.Core) error {
 	pendingShares, err := core.GetPendingShares()
 	if err != nil {
 		return fmt.Errorf("getting pending shares: %w", err)
@@ -37,11 +69,11 @@ func listPendingShares(core lb.Core, isFullIDs bool) error {
 		return nil
 	}
 	shareInfos := filesToShareInfos(pendingShares)
-	fmt.Println(shareInfoTable(shareInfos, isFullIDs))
+	fmt.Println(shareInfoTable(shareInfos, c.fullIDs))
 	return nil
 }
 
-func acceptShare(core lb.Core, id, dest, newName string) error {
+func (c *shareAcceptCmd) run(core lockbook.Core) error {
 	pendingShares, err := core.GetPendingShares()
 	if err != nil {
 		return fmt.Errorf("getting pending shares: %w", err)
@@ -49,13 +81,13 @@ func acceptShare(core lb.Core, id, dest, newName string) error {
 	if len(pendingShares) == 0 {
 		return errors.New("no pending shares to accept")
 	}
-	match, err := getOnePendingShareMatch(pendingShares, id)
+	match, err := getOnePendingShareMatch(pendingShares, c.target)
 	if err != nil {
 		return err
 	}
-	parentID := lb.FileID{}
+	parentID := lockbook.FileID{}
 	// If the destination is a valid UUID, it must be of an existing directory.
-	if destID := uuid.FromStringOrNil(dest); !destID.IsNil() {
+	if destID := uuid.FromStringOrNil(c.dest); !destID.IsNil() {
 		f, err := core.FileByID(destID)
 		if err != nil {
 			return fmt.Errorf("file by id %q: %w", destID, err)
@@ -67,15 +99,15 @@ func acceptShare(core lb.Core, id, dest, newName string) error {
 	} else {
 		// If the destination path exists, it must be a directory. The link will be
 		// dropped in it.
-		f, exists, err := maybeFileByPath(core, dest)
+		f, exists, err := maybeFileByPath(core, c.dest)
 		if err != nil {
-			return fmt.Errorf("file by path %q: %w", dest, err)
+			return fmt.Errorf("file by path %q: %w", c.dest, err)
 		}
 		if !exists {
 			// If the destination path doesn't exist, then it's just treated as a
 			// non-existent directory path. The user can choose a name with the `--rename`
 			// flag.
-			fPath := dest
+			fPath := c.dest
 			if fPath[len(fPath)-1] != '/' {
 				fPath += "/"
 			}
@@ -86,13 +118,13 @@ func acceptShare(core lb.Core, id, dest, newName string) error {
 			parentID = newFile.ID
 		} else {
 			if !f.IsDir() {
-				return fmt.Errorf("existing destination path %q is a doc, must be a folder", dest)
+				return fmt.Errorf("existing destination path %q is a doc, must be a folder", c.dest)
 			}
 			parentID = f.ID
 		}
 	}
 
-	name := newName
+	name := c.newName
 	if name == "" {
 		name = match.Name
 	}
@@ -100,14 +132,14 @@ func acceptShare(core lb.Core, id, dest, newName string) error {
 		name = name[:len(name)-1] // Prevent "name contains slash" error.
 	}
 
-	_, err = core.CreateFile(name, parentID, lb.FileTypeLink{Target: match.ID})
+	_, err = core.CreateFile(name, parentID, lockbook.FileTypeLink{Target: match.ID})
 	if err != nil {
 		return fmt.Errorf("creating link: %w", err)
 	}
 	return nil
 }
 
-func deletePendingShare(core lb.Core, id string) error {
+func (c *shareRejectCmd) run(core lockbook.Core) error {
 	pendingShares, err := core.GetPendingShares()
 	if err != nil {
 		return fmt.Errorf("getting pending shares: %w", err)
@@ -115,7 +147,7 @@ func deletePendingShare(core lb.Core, id string) error {
 	if len(pendingShares) == 0 {
 		return errors.New("no pending shares to delete")
 	}
-	match, err := getOnePendingShareMatch(pendingShares, id)
+	match, err := getOnePendingShareMatch(pendingShares, c.target)
 	if err != nil {
 		return err
 	}
@@ -125,8 +157,8 @@ func deletePendingShare(core lb.Core, id string) error {
 	return nil
 }
 
-func getOnePendingShareMatch(shares []lb.File, id string) (lb.File, error) {
-	matches := []lb.File{}
+func getOnePendingShareMatch(shares []lockbook.File, id string) (lockbook.File, error) {
+	matches := []lockbook.File{}
 	for _, f := range shares {
 		if strings.HasPrefix(f.ID.String(), id) {
 			matches = append(matches, f)
@@ -138,10 +170,10 @@ func getOnePendingShareMatch(shares []lb.File, id string) (lb.File, error) {
 		if t := uuid.FromStringOrNil(id); !t.IsNil() {
 			desc = " prefix"
 		}
-		return lb.File{}, fmt.Errorf("no pending share found with id%s %s", desc, id)
+		return lockbook.File{}, fmt.Errorf("no pending share found with id%s %s", desc, id)
 	}
 	if n > 1 {
-		return lb.File{}, fmt.Errorf(
+		return lockbook.File{}, fmt.Errorf(
 			"id prefix %q matched %d pending shares:\n%s",
 			id, n, shareInfoTable(filesToShareInfos(matches), true),
 		)
@@ -150,13 +182,13 @@ func getOnePendingShareMatch(shares []lb.File, id string) (lb.File, error) {
 }
 
 type shareInfo struct {
-	id   lb.FileID
+	id   lockbook.FileID
 	from string
 	name string
 	mode string
 }
 
-func filesToShareInfos(files []lb.File) []shareInfo {
+func filesToShareInfos(files []lockbook.File) []shareInfo {
 	infos := make([]shareInfo, len(files))
 	for i, f := range files {
 		from, mode := "", ""
