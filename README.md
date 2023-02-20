@@ -9,7 +9,8 @@ as `lbcli` (and other Go projects) will likely live here forever.
 
 * [`c_interface_v2`](./c_interface_v2) - C FFI (in Rust) for [`lockook_core`](https://github.com/lockbook/lockbook/tree/master/libs/core).
 * [`go-lockbook`](./go-lockbook) - Go bindings for Lockbook core using `c_interface_v2`.
-* [`lbcli`](./lbcli) - A CLI written in Go using the Go bindings.
+* [`lbcli`](./lbcli) - A CLI implemented in Go using the Go bindings.
+* [`lbgui`](./lbcli) - A GUI implemented in Go using the Go bindings and GioUI.
 
 ## Adopted Upstream
 
