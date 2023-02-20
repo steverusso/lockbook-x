@@ -198,7 +198,7 @@ pub unsafe extern "C" fn lb_init(writeable_path: *const c_char, logs: bool) -> L
 /// The returned value must be passed to `free` to avoid a memory leak.
 #[no_mangle]
 pub unsafe extern "C" fn lb_writeable_path(core: *mut c_void) -> *mut c_char {
-    cstr(core!(core).config.writeable_path.clone())
+    cstr(core!(core).get_config().unwrap().writeable_path.clone()) // todo(steve)
 }
 
 #[repr(C)]
