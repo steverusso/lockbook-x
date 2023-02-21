@@ -39,7 +39,7 @@ tasks:
       - cbindgen src/lib.rs --config cbindgen.toml > ../{{.C_INTERFACE_HEADER}}
       - task: rust-lint
     sources:
-      - ../lockbook/libs/core/**/*
+      - ../lockbook/libs/**/*
       - src/**
       - cbindgen.toml
     generates:
