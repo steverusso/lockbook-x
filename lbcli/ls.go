@@ -10,13 +10,32 @@ import (
 
 // list files in a directory
 type lsCmd struct {
-	short     bool   `opt:"short,s" desc:"just display the name (or file path)"`
-	recursive bool   `opt:"recursive,r" desc:"recursively include all children of the target directory"`
-	paths     bool   `opt:"paths" desc:"show absolute file paths instead of file names"`
-	onlyDirs  bool   `opt:"dirs" desc:"only show folders"`
-	onlyDocs  bool   `opt:"docs" desc:"only show documents"`
-	fullIDs   bool   `opt:"ids" desc:"show full uuids instead of prefixes"`
-	target    string `arg:"target directory (defaults to root)"`
+	// just display the name (or file path)
+	//
+	// clap:opt short,s
+	short bool
+	// recursively include all children of the target directory
+	//
+	// clap:opt recursive,r
+	recursive bool
+	// show absolute file paths instead of file names
+	//
+	// clap:opt paths
+	paths bool
+	// only show folders
+	//
+	// clap:opt dirs
+	onlyDirs bool
+	// only show documents
+	//
+	// clap:opt docs
+	onlyDocs bool
+	// show full uuids instead of prefixes
+	//
+	// clap:opt ids
+	fullIDs bool
+	// target directory (defaults to root)
+	target string
 }
 
 type lsConfig struct {

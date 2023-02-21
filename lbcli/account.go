@@ -11,6 +11,8 @@ import (
 )
 
 // account related commands
+//
+// clap:cmd_usage <command> [args...]
 type acctCmd struct {
 	restore     *acctRestoreCmd
 	privkey     *acctPrivKeyCmd
@@ -21,7 +23,10 @@ type acctCmd struct {
 
 // restore an existing account from its secret account string
 type acctRestoreCmd struct {
-	noSync bool `opt:"no-sync" desc:"don't perform the initial sync"`
+	// don't perform the initial sync
+	//
+	// clap:opt no-sync
+	noSync bool
 }
 
 // print out the private key for this lockbook
@@ -38,8 +43,14 @@ type acctUnsubscribeCmd struct{}
 
 // create a lockbook account
 type initCmd struct {
-	welcome bool `opt:"welcome" desc:"include the welcome document"`
-	noSync  bool `opt:"no-sync" desc:"don't perform the initial sync"`
+	// include the welcome document
+	//
+	// clap:opt welcome
+	welcome bool
+	// don't perform the initial sync
+	//
+	// clap:opt no-sync
+	noSync bool
 }
 
 func (c *initCmd) run(core lockbook.Core) error {

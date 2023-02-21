@@ -16,7 +16,10 @@ type debugCmd struct {
 
 // view info about a target file
 type debugFinfoCmd struct {
-	target string `arg:"the target can be a file path, uuid, or uuid prefix,required"`
+	// the target can be a file path, uuid, or uuid prefix
+	//
+	// clap:arg_required
+	target string
 }
 
 // find invalid states within your lockbook
