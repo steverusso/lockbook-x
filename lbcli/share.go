@@ -21,26 +21,48 @@ type shareCmd struct {
 
 // share a file with another lockbook user
 type shareCreateCmd struct {
-	readOnly bool   `opt:"ro" desc:"the other user will not be able to edit the file"`
-	target   string `arg:"the path or id of the lockbook file you'd like to share,required"`
-	username string `arg:"the username of the other lockbook user,required"`
+	// the other user will not be able to edit the file
+	//
+	// clap:opt ro
+	readOnly bool
+	// the path or id of the lockbook file you'd like to share
+	//
+	// clap:arg_required
+	target string
+	// the username of the other lockbook user
+	//
+	// clap:arg_required
+	username string
 }
 
 // list pending shares
 type sharePendingCmd struct {
-	fullIDs bool `opt:"ids" desc:"print full uuids instead of prefixes"`
+	// print full uuids instead of prefixes
+	//
+	// clap:opt ids
+	fullIDs bool
 }
 
 // accept a pending share
 type shareAcceptCmd struct {
-	target  string `arg:"id or id prefix of the pending share to accept,required"`
-	dest    string `arg:"where to place this in your file tree,required"`
-	newName string `arg:"name this file something else"`
+	// id or id prefix of the pending share to accept
+	//
+	// clap:arg_required
+	target string
+	// where to place this in your file tree
+	//
+	// clap:arg_required
+	dest string
+	// name this file something else
+	newName string
 }
 
 // reject a pending share
 type shareRejectCmd struct {
-	target string `arg:"id or id prefix of a pending share,required"`
+	// id or id prefix of a pending share
+	//
+	// clap:arg_required
+	target string
 }
 
 func (c *shareCreateCmd) run(core lockbook.Core) error {

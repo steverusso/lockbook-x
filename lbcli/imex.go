@@ -10,16 +10,31 @@ import (
 )
 
 // export a lockbook drawing as an image written to stdout
+//
+// clap:cmd_usage <target> [png|jpeg|pnm|tga|farbfeld|bmp]
 type drawingCmd struct {
-	target string `arg:"the drawing to export,required"`
-	imgFmt string `arg:"the format to convert the drawing into"`
+	// the drawing to export
+	//
+	// clap:arg_required
+	target string
+	// the format to convert the drawing into
+	imgFmt string
 }
 
 // copy a lockbook file to your file system
+//
+// clap:cmd_usage <target> [dest-dir]
 type exportCmd struct {
-	verbose bool   `opt:"verbose,v" desc:"print out each file as it's being exported"`
-	target  string `arg:"lockbook file path or id,required"`
-	dest    string `arg:"disk file path (defaults to working dir)"`
+	// print out each file as it's being exported
+	//
+	// clap:opt verbose,v
+	verbose bool
+	// lockbook file path or id
+	//
+	// clap:arg_required
+	target string
+	// disk file path (defaults to working dir)
+	dest string
 }
 
 func (c *exportCmd) run(core lockbook.Core) error {

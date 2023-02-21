@@ -11,42 +11,82 @@ import (
 
 // print one or more documents to stdout
 type catCmd struct {
-	target string `arg:"lockbook file path or id,required"`
+	// lockbook file path or id
+	//
+	// clap:arg_required
+	target string
 }
 
 // create a directory or do nothing if it exists
 type mkdirCmd struct {
-	path string `arg:"a path at which to create the directory,required"`
+	// a path at which to create the directory
+	//
+	// clap:arg_required
+	path string
 }
 
 // create a document or do nothing if it exists
 type mkdocCmd struct {
-	path string `arg:"a path at which to create the document,required"`
+	// a path at which to create the document
+	//
+	// clap:arg_required
+	path string
 }
 
 // move a file to another parent
 type mvCmd struct {
-	src  string `arg:",required"`
-	dest string `arg:",required"`
+	// the file to move
+	//
+	// clap:arg_required
+	src string
+	// the destination directory
+	//
+	// clap:arg_required
+	dest string
 }
 
 // rename a file
+//
+// clap:cmd_usage [-f] <target> [new-name]
 type renameCmd struct {
-	force   bool   `opt:"force,f" desc:"non-interactive (fail instead of prompting for corrections)"`
-	target  string `arg:",required"`
-	newName string `arg:",required"`
+	// non-interactive (fail instead of prompting for corrections)
+	//
+	// clap:opt force,f
+	force bool
+	// the file to rename
+	//
+	// clap:arg_required
+	target string
+	// the desired new name
+	//
+	// clap:arg_required
+	newName string
 }
 
 // delete a file
 type rmCmd struct {
-	force  bool   `opt:"force,f" desc:"don't prompt for confirmation"`
-	target string `arg:"lockbook path or id to delete,required"`
+	// don't prompt for confirmation
+	//
+	// clap:opt force,f
+	force bool
+	// lockbook path or id to delete
+	//
+	// clap:arg_required
+	target string
 }
 
 // write data from stdin to a lockbook document
+//
+// clap:cmd_usage [--trunc] <target>
 type writeCmd struct {
-	trunc  bool   `opt:"trunc" desc:"truncate the file instead of appending to it"`
-	target string `arg:"lockbook path or id to write,required"`
+	// truncate the file instead of appending to it
+	//
+	// clap:opt trunc
+	trunc bool
+	// lockbook path or id to write
+	//
+	// clap:arg_required
+	target string
 }
 
 func (c *catCmd) run(core lockbook.Core) error {
