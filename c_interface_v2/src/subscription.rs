@@ -1,4 +1,4 @@
-use lockbook_core::{CancelSubscriptionError, PaymentMethod, PaymentPlatform, StripeAccountTier};
+use lockbook_core::{PaymentMethod, PaymentPlatform, StripeAccountTier};
 
 use crate::*;
 
@@ -61,10 +61,7 @@ pub unsafe extern "C" fn lb_get_subscription_info(core: *mut c_void) -> LbSubInf
             }
             r.ok.period_end = info.period_end;
         }
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = LbErrorCode::Unexpected;
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -74,14 +71,10 @@ pub unsafe extern "C" fn lb_get_subscription_info(core: *mut c_void) -> LbSubInf
 /// The returned value must be passed to `lb_error_free` to avoid a memory leak.
 #[no_mangle]
 pub unsafe extern "C" fn lb_upgrade_account_stripe_old_card(core: *mut c_void) -> LbError {
-    let mut e = lb_error_none();
-    if let Err(err) =
-        core!(core).upgrade_account_stripe(StripeAccountTier::Premium(PaymentMethod::OldCard))
-    {
-        e.msg = cstr(format!("{:?}", err));
-        e.code = LbErrorCode::Unexpected;
+    match core!(core).upgrade_account_stripe(StripeAccountTier::Premium(PaymentMethod::OldCard)) {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
     }
-    e
 }
 
 /// # Safety
@@ -107,8 +100,7 @@ pub unsafe extern "C" fn lb_upgrade_account_stripe_new_card(
             cvc,
         }))
     {
-        e.msg = cstr(format!("{:?}", err));
-        e.code = LbErrorCode::Unexpected;
+        e = lberr(err);
     }
     e
 }
@@ -118,22 +110,8 @@ pub unsafe extern "C" fn lb_upgrade_account_stripe_new_card(
 /// The returned value must be passed to `lb_error_free` to avoid a memory leak.
 #[no_mangle]
 pub unsafe extern "C" fn lb_cancel_subscription(core: *mut c_void) -> LbError {
-    let mut e = lb_error_none();
-    if let Err(err) = core!(core).cancel_subscription() {
-        use CancelSubscriptionError::*;
-        e.msg = cstr(format!("{:?}", err));
-        e.code = match err {
-            Error::UiError(err) => match err {
-                NotPremium => LbErrorCode::NotPremium,
-                AlreadyCanceled => LbErrorCode::SubscriptionAlreadyCanceled,
-                UsageIsOverFreeTierDataCap => LbErrorCode::UsageIsOverFreeTierDataCap,
-                ExistingRequestPending => LbErrorCode::ExistingRequestPending,
-                CouldNotReachServer => LbErrorCode::CouldNotReachServer,
-                ClientUpdateRequired => LbErrorCode::ClientUpdateRequired,
-                CannotCancelForAppStore => LbErrorCode::CannotCancelForAppStore,
-            },
-            Error::Unexpected(_) => LbErrorCode::Unexpected,
-        };
+    match core!(core).cancel_subscription() {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
     }
-    e
 }

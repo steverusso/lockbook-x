@@ -6,7 +6,7 @@ mod sync_and_usage;
 use std::ffi::{c_char, c_void};
 use std::ptr::null_mut;
 
-use lockbook_core::{Config, Core, Error};
+use lockbook_core::{Config, Core, CoreError};
 
 use crate::files::*;
 
@@ -39,6 +39,84 @@ pub static LB_DEFAULT_API_LOCATION: &[u8; 30] = b"https://api.prod.lockbook.net\
 pub struct LbError {
     code: LbErrorCode,
     msg: *mut c_char,
+    trace: *mut c_char,
+}
+
+unsafe fn lberr(le: lockbook_core::LbError) -> LbError {
+    let mut e = lb_error_none();
+    e.msg = cstr(format!("{:?}", le.kind));
+    e.code = lb_error_code(le.kind);
+    if let Some(trace) = le.backtrace {
+        e.trace = cstr(format!("{:?}", trace));
+    }
+    e
+}
+
+unsafe fn lberr_unexpected(ue: lockbook_core::UnexpectedError) -> LbError {
+    let mut e = lb_error_none();
+    e.msg = cstr(ue.msg);
+    e.code = LbErrorCode::Unexpected;
+    e.trace = cstr(format!("{:?}", ue.backtrace));
+    e
+}
+
+fn lb_error_code(kind: CoreError) -> LbErrorCode {
+    match kind {
+        CoreError::AccountExists => LbErrorCode::AccountExists,
+        CoreError::AccountNonexistent => LbErrorCode::AccountNonexistent,
+        CoreError::AccountStringCorrupted => LbErrorCode::AccountStringCorrupted,
+        CoreError::AlreadyCanceled => LbErrorCode::AlreadyCanceled,
+        CoreError::AlreadyPremium => LbErrorCode::AlreadyPremium,
+        CoreError::AppStoreAccountAlreadyLinked => LbErrorCode::AppStoreAccountAlreadyLinked,
+        CoreError::CannotCancelSubscriptionForAppStore => {
+            LbErrorCode::CannotCancelSubscriptionForAppStore
+        }
+        CoreError::CardDecline => LbErrorCode::CardDecline,
+        CoreError::CardExpired => LbErrorCode::CardExpired,
+        CoreError::CardInsufficientFunds => LbErrorCode::CardInsufficientFunds,
+        CoreError::CardInvalidCvc => LbErrorCode::CardInvalidCvc,
+        CoreError::CardInvalidExpMonth => LbErrorCode::CardInvalidExpMonth,
+        CoreError::CardInvalidExpYear => LbErrorCode::CardInvalidExpYear,
+        CoreError::CardInvalidNumber => LbErrorCode::CardInvalidNumber,
+        CoreError::CardNotSupported => LbErrorCode::CardNotSupported,
+        CoreError::ClientUpdateRequired => LbErrorCode::ClientUpdateRequired,
+        CoreError::CurrentUsageIsMoreThanNewTier => LbErrorCode::CurrentUsageIsMoreThanNewTier,
+        CoreError::DiskPathInvalid => LbErrorCode::DiskPathInvalid,
+        CoreError::DiskPathTaken => LbErrorCode::DiskPathTaken,
+        CoreError::DrawingInvalid => LbErrorCode::DrawingInvalid,
+        CoreError::ExistingRequestPending => LbErrorCode::ExistingRequestPending,
+        CoreError::FileNameContainsSlash => LbErrorCode::FileNameContainsSlash,
+        CoreError::FileNameEmpty => LbErrorCode::FileNameEmpty,
+        CoreError::FileNonexistent => LbErrorCode::FileNonexistent,
+        CoreError::FileNotDocument => LbErrorCode::FileNotDocument,
+        CoreError::FileNotFolder => LbErrorCode::FileNotFolder,
+        CoreError::FileParentNonexistent => LbErrorCode::FileParentNonexistent,
+        CoreError::FolderMovedIntoSelf => LbErrorCode::FolderMovedIntoSelf,
+        CoreError::InsufficientPermission => LbErrorCode::InsufficientPermission,
+        CoreError::InvalidPurchaseToken => LbErrorCode::InvalidPurchaseToken,
+        CoreError::InvalidAuthDetails => LbErrorCode::InvalidAuthDetails,
+        CoreError::LinkInSharedFolder => LbErrorCode::LinkInSharedFolder,
+        CoreError::LinkTargetIsOwned => LbErrorCode::LinkTargetIsOwned,
+        CoreError::LinkTargetNonexistent => LbErrorCode::LinkTargetNonexistent,
+        CoreError::MultipleLinksToSameFile => LbErrorCode::MultipleLinksToSameFile,
+        CoreError::NotPremium => LbErrorCode::NotPremium,
+        CoreError::OldCardDoesNotExist => LbErrorCode::OldCardDoesNotExist,
+        CoreError::PathContainsEmptyFileName => LbErrorCode::PathContainsEmptyFileName,
+        CoreError::PathTaken => LbErrorCode::PathTaken,
+        CoreError::RootModificationInvalid => LbErrorCode::RootModificationInvalid,
+        CoreError::RootNonexistent => LbErrorCode::RootNonexistent,
+        CoreError::ServerDisabled => LbErrorCode::ServerDisabled,
+        CoreError::ServerUnreachable => LbErrorCode::ServerUnreachable,
+        CoreError::ShareAlreadyExists => LbErrorCode::ShareAlreadyExists,
+        CoreError::ShareNonexistent => LbErrorCode::ShareNonexistent,
+        CoreError::TryAgain => LbErrorCode::TryAgain,
+        CoreError::UsageIsOverFreeTierDataCap => LbErrorCode::UsageIsOverFreeTierDataCap,
+        CoreError::UsernameInvalid => LbErrorCode::UsernameInvalid,
+        CoreError::UsernameNotFound => LbErrorCode::UsernameNotFound,
+        CoreError::UsernamePublicKeyMismatch => LbErrorCode::UsernamePublicKeyMismatch,
+        CoreError::UsernameTaken => LbErrorCode::UsernameTaken,
+        CoreError::Unexpected(_) => LbErrorCode::Unexpected,
+    }
 }
 
 /// # Safety
@@ -47,6 +125,7 @@ pub extern "C" fn lb_error_none() -> LbError {
     LbError {
         code: LbErrorCode::Success,
         msg: null_mut(),
+        trace: null_mut(),
     }
 }
 
@@ -56,6 +135,7 @@ pub unsafe extern "C" fn lb_error_copy(err: LbError) -> LbError {
     LbError {
         code: err.code,
         msg: libc::strdup(err.msg),
+        trace: libc::strdup(err.trace),
     }
 }
 
@@ -63,6 +143,7 @@ pub unsafe extern "C" fn lb_error_copy(err: LbError) -> LbError {
 #[no_mangle]
 pub unsafe extern "C" fn lb_error_free(err: LbError) {
     libc::free(err.msg as *mut c_void);
+    libc::free(err.trace as *mut c_void);
 }
 
 #[derive(PartialEq)]
@@ -70,37 +151,57 @@ pub unsafe extern "C" fn lb_error_free(err: LbError) {
 pub enum LbErrorCode {
     Success = 0,
     Unexpected,
-    AccountExistsAlready,
-    AccountDoesNotExist,
+    AccountExists,
+    AccountNonexistent,
     AccountStringCorrupted,
+    AlreadyCanceled,
+    AlreadyPremium,
+    AppStoreAccountAlreadyLinked,
+    CannotCancelSubscriptionForAppStore,
+    CardDecline,
+    CardExpired,
+    CardInsufficientFunds,
+    CardInvalidCvc,
+    CardInvalidExpMonth,
+    CardInvalidExpYear,
+    CardInvalidNumber,
+    CardNotSupported,
     ClientUpdateRequired,
-    CouldNotReachServer,
-    FileExists,
-    FileIsNotDocument,
-    FileIsNotFolder,
+    CurrentUsageIsMoreThanNewTier,
+    DiskPathInvalid,
+    DiskPathTaken,
+    DrawingInvalid,
+    ExistingRequestPending,
     FileNameContainsSlash,
     FileNameEmpty,
-    FileNameUnavailable,
-    FileNotFound,
-    FolderMovedIntoItself,
+    FileNonexistent,
+    FileNotDocument,
+    FileNotFolder,
+    FileParentNonexistent,
+    FolderMovedIntoSelf,
     InsufficientPermission,
-    InvalidDrawing,
+    InvalidPurchaseToken,
+    InvalidAuthDetails,
     LinkInSharedFolder,
-    NoAccount,
-    NoRoot,
-    NoRootOps,
-    PathContainsEmptyFile,
-    TargetParentNotFound,
-    UsernameInvalid,
-    UsernamePubKeyMismatch,
-    UsernameTaken,
-    ServerDisabled,
-
+    LinkTargetIsOwned,
+    LinkTargetNonexistent,
+    MultipleLinksToSameFile,
     NotPremium,
-    SubscriptionAlreadyCanceled,
+    OldCardDoesNotExist,
+    PathContainsEmptyFileName,
+    PathTaken,
+    RootModificationInvalid,
+    RootNonexistent,
+    ServerDisabled,
+    ServerUnreachable,
+    ShareAlreadyExists,
+    ShareNonexistent,
+    TryAgain,
     UsageIsOverFreeTierDataCap,
-    ExistingRequestPending,
-    CannotCancelForAppStore,
+    UsernameInvalid,
+    UsernameNotFound,
+    UsernamePublicKeyMismatch,
+    UsernameTaken,
 }
 
 #[repr(C)]

@@ -1,5 +1,3 @@
-use lockbook_core::{AccountExportError, CreateAccountError, GetAccountError, ImportError};
-
 use crate::*;
 
 #[repr(C)]
@@ -63,21 +61,7 @@ pub unsafe extern "C" fn lb_create_account(
             r.ok.username = cstr(acct.username);
             r.ok.api_url = cstr(acct.api_url);
         }
-        Err(err) => {
-            use CreateAccountError::*;
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    UsernameTaken => LbErrorCode::UsernameTaken,
-                    InvalidUsername => LbErrorCode::UsernameInvalid,
-                    AccountExistsAlready => LbErrorCode::AccountExistsAlready,
-                    CouldNotReachServer => LbErrorCode::CouldNotReachServer,
-                    ClientUpdateRequired => LbErrorCode::ClientUpdateRequired,
-                    ServerDisabled => LbErrorCode::ServerDisabled,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -98,21 +82,7 @@ pub unsafe extern "C" fn lb_import_account(
             r.ok.username = cstr(acct.username);
             r.ok.api_url = cstr(acct.api_url);
         }
-        Err(err) => {
-            use ImportError::*;
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    AccountStringCorrupted => LbErrorCode::AccountStringCorrupted,
-                    AccountExistsAlready => LbErrorCode::AccountExistsAlready,
-                    AccountDoesNotExist => LbErrorCode::AccountDoesNotExist,
-                    UsernamePKMismatch => LbErrorCode::UsernamePubKeyMismatch,
-                    CouldNotReachServer => LbErrorCode::CouldNotReachServer,
-                    ClientUpdateRequired => LbErrorCode::ClientUpdateRequired,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -127,14 +97,7 @@ pub unsafe extern "C" fn lb_export_account(core: *mut c_void) -> LbStringResult 
     let mut r = lb_string_result_new();
     match core!(core).export_account() {
         Ok(acct_str) => r.ok = cstr(acct_str),
-        Err(err) => {
-            use AccountExportError::*;
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(NoAccount) => LbErrorCode::NoAccount,
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -152,15 +115,7 @@ pub unsafe extern "C" fn lb_get_account(core: *mut c_void) -> LbAccountResult {
             r.ok.username = cstr(acct.username);
             r.ok.api_url = cstr(acct.api_url);
         }
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    GetAccountError::NoAccount => LbErrorCode::NoAccount,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }

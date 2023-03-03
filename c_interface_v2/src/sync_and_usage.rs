@@ -1,4 +1,4 @@
-use lockbook_core::{CalculateWorkError, ClientWorkUnit, GetUsageError, SyncAllError, WorkUnit};
+use lockbook_core::{ClientWorkUnit, WorkUnit};
 
 use crate::*;
 
@@ -86,17 +86,7 @@ pub unsafe extern "C" fn lb_calculate_work(core: *mut c_void) -> LbCalcWorkResul
             r.ok.num_units = list.len();
             r.ok.last_server_update_at = work.most_recent_update_from_server;
         }
-        Err(err) => {
-            use CalculateWorkError::*;
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    CouldNotReachServer => LbErrorCode::CouldNotReachServer,
-                    ClientUpdateRequired => LbErrorCode::ClientUpdateRequired,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -155,16 +145,7 @@ pub unsafe extern "C" fn lb_sync_all(
         };
         progress(c_sp, user_data);
     }))) {
-        use SyncAllError::*;
-        e.msg = cstr(format!("{:?}", err));
-        e.code = match err {
-            Error::UiError(err) => match err {
-                Retry => LbErrorCode::Unexpected,
-                ClientUpdateRequired => LbErrorCode::ClientUpdateRequired,
-                CouldNotReachServer => LbErrorCode::CouldNotReachServer,
-            },
-            Error::Unexpected(_) => LbErrorCode::Unexpected,
-        };
+        e = lberr(err);
     }
     e
 }
@@ -213,10 +194,7 @@ pub unsafe extern "C" fn lb_get_last_synced_human_string(core: *mut c_void) -> L
     let mut r = lb_string_result_new();
     match core!(core).get_last_synced_human_string() {
         Ok(acct_str) => r.ok = cstr(acct_str),
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = LbErrorCode::Unexpected;
-        }
+        Err(err) => r.err = lberr_unexpected(err),
     }
     r
 }
@@ -317,17 +295,7 @@ pub unsafe extern "C" fn lb_get_usage(core: *mut c_void) -> LbUsageResult {
             r.ok.data_cap.exact = m.data_cap.exact;
             r.ok.data_cap.readable = cstr(m.data_cap.readable);
         }
-        Err(err) => {
-            use GetUsageError::*;
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    ClientUpdateRequired => LbErrorCode::ClientUpdateRequired,
-                    CouldNotReachServer => LbErrorCode::CouldNotReachServer,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -364,17 +332,7 @@ pub unsafe extern "C" fn lb_get_uncompressed_usage(core: *mut c_void) -> LbUncUs
             r.ok.exact = im.exact;
             r.ok.readable = cstr(im.readable);
         }
-        Err(err) => {
-            use GetUsageError::*;
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    ClientUpdateRequired => LbErrorCode::ClientUpdateRequired,
-                    CouldNotReachServer => LbErrorCode::CouldNotReachServer,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
