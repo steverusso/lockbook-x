@@ -16,6 +16,12 @@ tasks:
       - go build {{.GO_LDFLAGS}}
       - task: go-lint
 
+  lbcli-install:
+    dir: lbcli
+    cmds:
+      - task: lbcli
+      - cp ./lbcli ~/.local/bin
+
   lbgui:
     dir: lbgui
     cmds:
