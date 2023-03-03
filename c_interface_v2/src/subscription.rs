@@ -71,13 +71,10 @@ pub unsafe extern "C" fn lb_get_subscription_info(core: *mut c_void) -> LbSubInf
 /// The returned value must be passed to `lb_error_free` to avoid a memory leak.
 #[no_mangle]
 pub unsafe extern "C" fn lb_upgrade_account_stripe_old_card(core: *mut c_void) -> LbError {
-    let mut e = lb_error_none();
-    if let Err(err) =
-        core!(core).upgrade_account_stripe(StripeAccountTier::Premium(PaymentMethod::OldCard))
-    {
-        e = lberr(err);
+    match core!(core).upgrade_account_stripe(StripeAccountTier::Premium(PaymentMethod::OldCard)) {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
     }
-    e
 }
 
 /// # Safety
@@ -113,9 +110,8 @@ pub unsafe extern "C" fn lb_upgrade_account_stripe_new_card(
 /// The returned value must be passed to `lb_error_free` to avoid a memory leak.
 #[no_mangle]
 pub unsafe extern "C" fn lb_cancel_subscription(core: *mut c_void) -> LbError {
-    let mut e = lb_error_none();
-    if let Err(err) = core!(core).cancel_subscription() {
-        e = lberr(err);
+    match core!(core).cancel_subscription() {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
     }
-    e
 }

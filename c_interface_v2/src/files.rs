@@ -404,12 +404,11 @@ pub unsafe extern "C" fn lb_write_document(
     data: *const u8,
     len: i32,
 ) -> LbError {
-    let mut e = lb_error_none();
     let data = std::slice::from_raw_parts(data, len as usize);
-    if let Err(err) = core!(core).write_document(id.into(), data) {
-        e = lberr(err);
+    match core!(core).write_document(id.into(), data) {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
     }
-    e
 }
 
 #[repr(C)]
@@ -499,11 +498,10 @@ pub unsafe extern "C" fn lb_export_drawing(
 /// The returned value must be passed to `lb_error_free` to avoid a memory leak.
 #[no_mangle]
 pub unsafe extern "C" fn lb_delete_file(core: *mut c_void, id: LbFileId) -> LbError {
-    let mut e = lb_error_none();
-    if let Err(err) = core!(core).delete_file(id.into()) {
-        e = lberr(err);
+    match core!(core).delete_file(id.into()) {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
     }
-    e
 }
 
 /// # Safety
@@ -515,11 +513,10 @@ pub unsafe extern "C" fn lb_move_file(
     id: LbFileId,
     new_parent: LbFileId,
 ) -> LbError {
-    let mut e = lb_error_none();
-    if let Err(err) = core!(core).move_file(id.into(), new_parent.into()) {
-        e = lberr(err);
+    match core!(core).move_file(id.into(), new_parent.into()) {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
     }
-    e
 }
 
 /// # Safety
@@ -531,11 +528,10 @@ pub unsafe extern "C" fn lb_rename_file(
     id: LbFileId,
     new_name: *const c_char,
 ) -> LbError {
-    let mut e = lb_error_none();
-    if let Err(err) = core!(core).rename_file(id.into(), rstr(new_name)) {
-        e = lberr(err);
+    match core!(core).rename_file(id.into(), rstr(new_name)) {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
     }
-    e
 }
 
 /// # Safety
@@ -579,9 +575,8 @@ pub unsafe extern "C" fn lb_get_pending_shares(core: *mut c_void) -> LbFileListR
 /// The returned value must be passed to `lb_error_free` to avoid a memory leak.
 #[no_mangle]
 pub unsafe extern "C" fn lb_delete_pending_share(core: *mut c_void, id: LbFileId) -> LbError {
-    let mut e = lb_error_none();
-    if let Err(err) = core!(core).delete_pending_share(id.into()) {
-        e = lberr(err);
+    match core!(core).delete_pending_share(id.into()) {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
     }
-    e
 }
