@@ -58,9 +58,9 @@ func (c *exportCmd) run(core lockbook.Core) error {
 		}
 		c.dest = filepath.Join(c.dest, acct.Username)
 	}
-	var forEach func(lockbook.ImportExportFileInfo)
+	var forEach func(lockbook.ExportFileInfo)
 	if c.verbose {
-		forEach = func(info lockbook.ImportExportFileInfo) {
+		forEach = func(info lockbook.ExportFileInfo) {
 			fmt.Printf("%s\n", info.LbPath)
 		}
 	}

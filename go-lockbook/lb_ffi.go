@@ -4,7 +4,7 @@ package lockbook
 #cgo LDFLAGS: ${SRCDIR}/../target/release/libc_interface_v2.a -lm
 #include "../lockbook_core.h"
 
-extern void go_imex_callback(struct LbImexFileInfo info, void *h);
+extern void go_imex_callback(struct LbExportFileInfo info, void *h);
 
 extern void go_sync_callback(struct LbSyncProgress sp, void *h);
 */
@@ -160,19 +160,19 @@ func (l *lbCoreFFI) MoveFile(srcID, destID FileID) error {
 }
 
 //export go_imex_callback
-func go_imex_callback(info C.LbImexFileInfo, handlePtr unsafe.Pointer) {
+func go_imex_callback(info C.LbExportFileInfo, handlePtr unsafe.Pointer) {
 	h := (*C.uintptr_t)(handlePtr)
-	fn := cgo.Handle(*h).Value().(func(C.LbImexFileInfo))
+	fn := cgo.Handle(*h).Value().(func(C.LbExportFileInfo))
 	fn(info)
 }
 
-func (l *lbCoreFFI) ExportFile(id FileID, dest string, fn func(ImportExportFileInfo)) error {
-	handle := cgo.NewHandle(func(cInfo C.LbImexFileInfo) {
+func (l *lbCoreFFI) ExportFile(id FileID, dest string, fn func(ExportFileInfo)) error {
+	handle := cgo.NewHandle(func(cInfo C.LbExportFileInfo) {
 		defer C.lb_imex_file_info_free(cInfo)
 		if fn == nil {
 			return
 		}
-		fn(ImportExportFileInfo{
+		fn(ExportFileInfo{
 			DiskPath: C.GoString(cInfo.disk_path),
 			LbPath:   C.GoString(cInfo.lb_path),
 		})

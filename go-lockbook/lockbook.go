@@ -34,7 +34,7 @@ type Core interface {
 	RenameFile(id FileID, newName string) error
 	MoveFile(srcID, destID FileID) error
 
-	ExportFile(id FileID, dest string, fn func(ImportExportFileInfo)) error
+	ExportFile(id FileID, dest string, fn func(ExportFileInfo)) error
 	ExportDrawing(id FileID, imgFmt ImageFormat) ([]byte, error)
 
 	GetLastSynced() (time.Time, error)
@@ -257,7 +257,7 @@ type FileUsage struct {
 	SizeBytes uint64
 }
 
-type ImportExportFileInfo struct {
+type ExportFileInfo struct {
 	DiskPath string
 	LbPath   string
 }

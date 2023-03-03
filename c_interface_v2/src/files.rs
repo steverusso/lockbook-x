@@ -412,19 +412,19 @@ pub unsafe extern "C" fn lb_write_document(
 }
 
 #[repr(C)]
-pub struct LbImexFileInfo {
+pub struct LbExportFileInfo {
     pub disk_path: *mut c_char,
     pub lb_path: *mut c_char,
 }
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn lb_imex_file_info_free(fi: LbImexFileInfo) {
+pub unsafe extern "C" fn lb_imex_file_info_free(fi: LbExportFileInfo) {
     libc::free(fi.disk_path as *mut c_void);
     libc::free(fi.lb_path as *mut c_void);
 }
 
-pub type LbImexCallback = unsafe extern "C" fn(LbImexFileInfo, *mut c_void);
+pub type LbImexCallback = unsafe extern "C" fn(LbExportFileInfo, *mut c_void);
 
 /// # Safety
 ///
@@ -443,7 +443,7 @@ pub unsafe extern "C" fn lb_export_file(
         rstr(dest).into(),
         false,
         Some(Box::new(move |info| {
-            let c_info = LbImexFileInfo {
+            let c_info = LbExportFileInfo {
                 disk_path: cstr(info.disk_path.to_string_lossy().to_string()),
                 lb_path: cstr(info.lockbook_path),
             };
