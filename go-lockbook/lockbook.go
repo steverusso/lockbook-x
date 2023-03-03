@@ -64,37 +64,57 @@ type ErrorCode uint32
 const (
 	CodeSuccess ErrorCode = iota
 	CodeUnexpected
-	CodeAccountExistsAlready
-	CodeAccountDoesNotExist
+	CodeAccountExists
+	CodeAccountNonexistent
 	CodeAccountStringCorrupted
+	CodeAlreadyCanceled
+	CodeAlreadyPremium
+	CodeAppStoreAccountAlreadyLinked
+	CodeCannotCancelSubscriptionForAppStore
+	CodeCardDecline
+	CodeCardExpired
+	CodeCardInsufficientFunds
+	CodeCardInvalidCvc
+	CodeCardInvalidExpMonth
+	CodeCardInvalidExpYear
+	CodeCardInvalidNumber
+	CodeCardNotSupported
 	CodeClientUpdateRequired
-	CodeCouldNotReachServer
-	CodeFileExists
-	CodeFileIsNotDocument
-	CodeFileIsNotFolder
+	CodeCurrentUsageIsMoreThanNewTier
+	CodeDiskPathInvalid
+	CodeDiskPathTaken
+	CodeDrawingInvalid
+	CodeExistingRequestPending
 	CodeFileNameContainsSlash
 	CodeFileNameEmpty
-	CodeFileNameUnavailable
-	CodeFileNotFound
-	CodeFolderMovedIntoItself
+	CodeFileNonexistent
+	CodeFileNotDocument
+	CodeFileNotFolder
+	CodeFileParentNonexistent
+	CodeFolderMovedIntoSelf
 	CodeInsufficientPermission
-	CodeInvalidDrawing
+	CodeInvalidPurchaseToken
+	CodeInvalidAuthDetails
 	CodeLinkInSharedFolder
-	CodeNoAccount
-	CodeNoRoot
-	CodeNoRootOps
-	CodePathContainsEmptyFile
-	CodeTargetParentNotFound
-	CodeUsernameInvalid
-	CodeUsernamePubKeyMismatch
-	CodeUsernameTaken
-	CodeServerDisabled
-
+	CodeLinkTargetIsOwned
+	CodeLinkTargetNonexistent
+	CodeMultipleLinksToSameFile
 	CodeNotPremium
-	CodeSubscriptionAlreadyCanceled
+	CodeOldCardDoesNotExist
+	CodePathContainsEmptyFileName
+	CodePathTaken
+	CodeRootModificationInvalid
+	CodeRootNonexistent
+	CodeServerDisabled
+	CodeServerUnreachable
+	CodeShareAlreadyExists
+	CodeShareNonexistent
+	CodeTryAgain
 	CodeUsageIsOverFreeTierDataCap
-	CodeExistingRequestPending
-	CodeCannotCancelForAppStore
+	CodeUsernameInvalid
+	CodeUsernameNotFound
+	CodeUsernamePublicKeyMismatch
+	CodeUsernameTaken
 )
 
 type Error struct {

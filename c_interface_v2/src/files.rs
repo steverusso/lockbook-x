@@ -1,8 +1,4 @@
-use lockbook_core::{
-    CreateFileAtPathError, ExportDrawingError, ExportFileError, File, FileDeleteError, FileType,
-    GetAndGetChildrenError, GetFileByIdError, GetFileByPathError, MoveFileError, ReadDocumentError,
-    RenameFileError, Share, ShareMode, SupportedImageFormats, Uuid, WriteToDocumentError,
-};
+use lockbook_core::{File, FileType, Share, ShareMode, SupportedImageFormats, Uuid};
 
 use crate::*;
 
@@ -244,10 +240,7 @@ pub unsafe extern "C" fn lb_create_file(
     };
     match core!(core).create_file(rstr(name), parent.into(), ftype) {
         Ok(f) => r.ok = lb_file_new(f),
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = LbErrorCode::Unexpected;
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -265,20 +258,7 @@ pub unsafe extern "C" fn lb_create_file_at_path(
     let mut r = lb_file_result_new();
     match core!(core).create_at_path(rstr(path_and_name)) {
         Ok(f) => r.ok = lb_file_new(f),
-        Err(err) => {
-            use CreateFileAtPathError::*;
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    FileAlreadyExists => LbErrorCode::FileExists,
-                    NoRoot => LbErrorCode::NoRoot,
-                    PathContainsEmptyFile => LbErrorCode::PathContainsEmptyFile,
-                    DocumentTreatedAsFolder => LbErrorCode::FileIsNotFolder,
-                    InsufficientPermission => LbErrorCode::InsufficientPermission,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -293,15 +273,7 @@ pub unsafe extern "C" fn lb_get_file_by_id(core: *mut c_void, id: LbFileId) -> L
     let mut r = lb_file_result_new();
     match core!(core).get_file_by_id(id.into()) {
         Ok(f) => r.ok = lb_file_new(f),
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    GetFileByIdError::NoFileWithThatId => LbErrorCode::FileNotFound,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -319,15 +291,7 @@ pub unsafe extern "C" fn lb_get_file_by_path(
     let mut r = lb_file_result_new();
     match core!(core).get_by_path(rstr(path)) {
         Ok(f) => r.ok = lb_file_new(f),
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    GetFileByPathError::NoFileAtThatPath => LbErrorCode::FileNotFound,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -342,10 +306,7 @@ pub unsafe extern "C" fn lb_get_path_by_id(core: *mut c_void, id: LbFileId) -> L
     let mut r = lb_string_result_new();
     match core!(core).get_path_by_id(id.into()) {
         Ok(path) => r.ok = cstr(path),
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = LbErrorCode::Unexpected;
-        }
+        Err(err) => r.err = lberr_unexpected(err),
     }
     r
 }
@@ -360,10 +321,7 @@ pub unsafe extern "C" fn lb_get_root(core: *mut c_void) -> LbFileResult {
     let mut r = lb_file_result_new();
     match core!(core).get_root() {
         Ok(f) => r.ok = lb_file_new(f),
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = LbErrorCode::Unexpected;
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -378,10 +336,7 @@ pub unsafe extern "C" fn lb_get_children(core: *mut c_void, id: LbFileId) -> LbF
     let mut r = lb_file_list_result_new();
     match core!(core).get_children(id.into()) {
         Ok(files) => lb_file_list_init(&mut r.ok, files),
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = LbErrorCode::Unexpected;
-        }
+        Err(err) => r.err = lberr_unexpected(err),
     }
     r
 }
@@ -399,17 +354,7 @@ pub unsafe extern "C" fn lb_get_and_get_children_recursively(
     let mut r = lb_file_list_result_new();
     match core!(core).get_and_get_children_recursively(id.into()) {
         Ok(files) => lb_file_list_init(&mut r.ok, files),
-        Err(err) => {
-            use GetAndGetChildrenError::*;
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    FileDoesNotExist => LbErrorCode::FileNotFound,
-                    DocumentTreatedAsFolder => LbErrorCode::FileIsNotFolder,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -424,10 +369,7 @@ pub unsafe extern "C" fn lb_list_metadatas(core: *mut c_void) -> LbFileListResul
     let mut r = lb_file_list_result_new();
     match core!(core).list_metadatas() {
         Ok(files) => lb_file_list_init(&mut r.ok, files),
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = LbErrorCode::Unexpected;
-        }
+        Err(err) => r.err = lberr_unexpected(err),
     }
     r
 }
@@ -447,17 +389,7 @@ pub unsafe extern "C" fn lb_read_document(core: *mut c_void, id: LbFileId) -> Lb
             r.ok.data = data.as_mut_ptr();
             r.ok.size = data.len();
         }
-        Err(err) => {
-            use ReadDocumentError::*;
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    TreatedFolderAsDocument => LbErrorCode::FileIsNotDocument,
-                    FileDoesNotExist => LbErrorCode::FileNotFound,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -475,16 +407,7 @@ pub unsafe extern "C" fn lb_write_document(
     let mut e = lb_error_none();
     let data = std::slice::from_raw_parts(data, len as usize);
     if let Err(err) = core!(core).write_document(id.into(), data) {
-        use WriteToDocumentError::*;
-        e.msg = cstr(format!("{:?}", err));
-        e.code = match err {
-            Error::UiError(err) => match err {
-                FileDoesNotExist => LbErrorCode::FileNotFound,
-                FolderTreatedAsDocument => LbErrorCode::FileIsNotDocument,
-                InsufficientPermission => LbErrorCode::InsufficientPermission,
-            },
-            Error::Unexpected(_) => LbErrorCode::Unexpected,
-        };
+        e = lberr(err);
     }
     e
 }
@@ -528,16 +451,7 @@ pub unsafe extern "C" fn lb_export_file(
             progress(c_info, user_data)
         })),
     ) {
-        use ExportFileError::*;
-        e.msg = cstr(format!("{:?}", err));
-        e.code = match err {
-            Error::UiError(err) => match err {
-                ParentDoesNotExist => LbErrorCode::Unexpected,
-                DiskPathTaken => LbErrorCode::Unexpected,
-                DiskPathInvalid => LbErrorCode::Unexpected,
-            },
-            Error::Unexpected(_) => LbErrorCode::Unexpected,
-        };
+        e = lberr(err);
     }
     e
 }
@@ -575,18 +489,7 @@ pub unsafe extern "C" fn lb_export_drawing(
             r.ok.data = data.as_mut_ptr();
             r.ok.size = data.len();
         }
-        Err(err) => {
-            use ExportDrawingError::*;
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = match err {
-                Error::UiError(err) => match err {
-                    FolderTreatedAsDrawing => LbErrorCode::FileIsNotDocument,
-                    FileDoesNotExist => LbErrorCode::FileNotFound,
-                    InvalidDrawing => LbErrorCode::InvalidDrawing,
-                },
-                Error::Unexpected(_) => LbErrorCode::Unexpected,
-            };
-        }
+        Err(err) => r.err = lberr(err),
     }
     r
 }
@@ -598,16 +501,7 @@ pub unsafe extern "C" fn lb_export_drawing(
 pub unsafe extern "C" fn lb_delete_file(core: *mut c_void, id: LbFileId) -> LbError {
     let mut e = lb_error_none();
     if let Err(err) = core!(core).delete_file(id.into()) {
-        use FileDeleteError::*;
-        e.msg = cstr(format!("{:?}", err));
-        e.code = match err {
-            Error::UiError(err) => match err {
-                CannotDeleteRoot => LbErrorCode::NoRootOps,
-                FileDoesNotExist => LbErrorCode::FileNotFound,
-                InsufficientPermission => LbErrorCode::InsufficientPermission,
-            },
-            Error::Unexpected(_) => LbErrorCode::Unexpected,
-        };
+        e = lberr(err);
     }
     e
 }
@@ -623,21 +517,7 @@ pub unsafe extern "C" fn lb_move_file(
 ) -> LbError {
     let mut e = lb_error_none();
     if let Err(err) = core!(core).move_file(id.into(), new_parent.into()) {
-        use MoveFileError::*;
-        e.msg = cstr(format!("{:?}", err));
-        e.code = match err {
-            Error::UiError(err) => match err {
-                CannotMoveRoot => LbErrorCode::NoRootOps,
-                DocumentTreatedAsFolder => LbErrorCode::FileIsNotFolder,
-                FileDoesNotExist => LbErrorCode::FileNotFound,
-                FolderMovedIntoItself => LbErrorCode::FolderMovedIntoItself,
-                TargetParentDoesNotExist => LbErrorCode::TargetParentNotFound,
-                TargetParentHasChildNamedThat => LbErrorCode::FileNameUnavailable,
-                LinkInSharedFolder => LbErrorCode::LinkInSharedFolder,
-                InsufficientPermission => LbErrorCode::InsufficientPermission,
-            },
-            Error::Unexpected(_) => LbErrorCode::Unexpected,
-        };
+        e = lberr(err);
     }
     e
 }
@@ -653,19 +533,7 @@ pub unsafe extern "C" fn lb_rename_file(
 ) -> LbError {
     let mut e = lb_error_none();
     if let Err(err) = core!(core).rename_file(id.into(), rstr(new_name)) {
-        use RenameFileError::*;
-        e.msg = cstr(format!("{:?}", err));
-        e.code = match err {
-            Error::UiError(err) => match err {
-                FileDoesNotExist => LbErrorCode::FileNotFound,
-                NewNameEmpty => LbErrorCode::FileNameEmpty,
-                NewNameContainsSlash => LbErrorCode::FileNameContainsSlash,
-                FileNameNotAvailable => LbErrorCode::FileNameUnavailable,
-                CannotRenameRoot => LbErrorCode::NoRootOps,
-                InsufficientPermission => LbErrorCode::InsufficientPermission,
-            },
-            Error::Unexpected(_) => LbErrorCode::Unexpected,
-        };
+        e = lberr(err);
     }
     e
 }
@@ -686,8 +554,7 @@ pub unsafe extern "C" fn lb_share_file(
         LbShareMode::Write => ShareMode::Write,
     };
     if let Err(err) = core!(core).share_file(id.into(), rstr(uname), mode) {
-        e.msg = cstr(format!("{:?}", err));
-        e.code = LbErrorCode::Unexpected;
+        e = lberr(err);
     }
     e
 }
@@ -702,10 +569,7 @@ pub unsafe extern "C" fn lb_get_pending_shares(core: *mut c_void) -> LbFileListR
     let mut r = lb_file_list_result_new();
     match core!(core).get_pending_shares() {
         Ok(files) => lb_file_list_init(&mut r.ok, files),
-        Err(err) => {
-            r.err.msg = cstr(format!("{:?}", err));
-            r.err.code = LbErrorCode::Unexpected;
-        }
+        Err(err) => r.err = lberr_unexpected(err),
     }
     r
 }
@@ -717,11 +581,7 @@ pub unsafe extern "C" fn lb_get_pending_shares(core: *mut c_void) -> LbFileListR
 pub unsafe extern "C" fn lb_delete_pending_share(core: *mut c_void, id: LbFileId) -> LbError {
     let mut e = lb_error_none();
     if let Err(err) = core!(core).delete_pending_share(id.into()) {
-        e.msg = cstr(format!("{:?}", err));
-        e.code = match err {
-            Error::UiError(_) => LbErrorCode::FileNotFound,
-            Error::Unexpected(_) => LbErrorCode::Unexpected,
-        };
+        e = lberr(err);
     }
     e
 }

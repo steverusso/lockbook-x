@@ -12,7 +12,7 @@ import (
 func maybeFileByPath(core lockbook.Core, p string) (lockbook.File, bool, error) {
 	f, err := core.FileByPath(p)
 	if err != nil {
-		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeFileNotFound {
+		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeFileNonexistent {
 			return lockbook.File{}, false, nil
 		}
 		return lockbook.File{}, false, err
@@ -28,7 +28,7 @@ func idFromSomething(core lockbook.Core, v string) (uuid.UUID, error) {
 	if err == nil {
 		return f.ID, nil
 	}
-	if err, ok := err.(*lockbook.Error); ok && err.Code != lockbook.CodeFileNotFound {
+	if err, ok := err.(*lockbook.Error); ok && err.Code != lockbook.CodeFileNonexistent {
 		return uuid.Nil, fmt.Errorf("trying to get a file by path: %w", err)
 	}
 	// Not a full UUID and not a path, so that leaves UUID prefix.

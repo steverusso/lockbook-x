@@ -60,7 +60,7 @@ func (s *splashScreen) doStartupWork() {
 	// Determine whether we're going to the onboard screen or the workspace by checking
 	// for an account.
 	if _, err = core.GetAccount(); err != nil {
-		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeNoAccount {
+		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeAccountNonexistent {
 			s.updates <- handoffToOnboard{core: core}
 			return
 		}

@@ -178,7 +178,7 @@ func run() error {
 	// Check for an account before every command besides `init`.
 	if a.init == nil && (a.acct == nil || a.acct.restore == nil) {
 		_, err = core.GetAccount()
-		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeNoAccount {
+		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeAccountNonexistent {
 			return errors.New("no account! run 'init' or 'init --restore' to get started.\n")
 		}
 		if err != nil {

@@ -152,7 +152,7 @@ func (c *renameCmd) run(core lockbook.Core) error {
 		if err == nil || c.force {
 			return err
 		}
-		if err, ok := err.(*lockbook.Error); !ok && err.Code != lockbook.CodeFileNameUnavailable {
+		if err, ok := err.(*lockbook.Error); !ok && err.Code != lockbook.CodePathTaken {
 			return err
 		}
 		// Loop until we get non-empty new input.
