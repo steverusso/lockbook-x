@@ -11,7 +11,7 @@ import (
 
 const idPrefixLen = 8
 
-//go:generate goclap lbcli
+//go:generate goclap -type lbcli
 
 // an unofficial lockbook cli implemented in go
 type lbcli struct {
