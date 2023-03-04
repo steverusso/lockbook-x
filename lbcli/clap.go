@@ -516,7 +516,7 @@ usage:
    export <target> [dest-dir]
 
 options:
-   -q, --quiet   print out each file as it's being exported
+   -q, --quiet   don't output progress on each file
    -h, --help    show this help message
 
 arguments:
