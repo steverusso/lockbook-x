@@ -9,31 +9,81 @@ import (
 	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-// export a lockbook drawing as an image written to stdout
+// import files into lockbook from your system
 //
-// clap:cmd_usage <target> [png|jpeg|pnm|tga|farbfeld|bmp]
-type drawingCmd struct {
-	// the drawing to export
+// clap:cmd_name import
+type importCmd struct {
+	// don't output progress on each file
+	//
+	// clap:opt quiet,q
+	quiet bool
+	// the file(s) to import into lockbook
 	//
 	// clap:arg_required
-	target string
-	// the format to convert the drawing into
-	imgFmt string
+	diskPath string
+	// where to put the imported files in lockbook
+	dest string
+}
+
+func (c *importCmd) run(core lockbook.Core) error {
+	// Determine the destination target's ID. If no destination was provided, use root.
+	var destID lockbook.FileID
+	if c.dest == "" {
+		root, err := core.GetRoot()
+		if err != nil {
+			return fmt.Errorf("getting root: %w", err)
+		}
+		destID = root.ID
+	} else {
+		id, err := idFromSomething(core, c.dest)
+		if err != nil {
+			return fmt.Errorf("trying to get an id from %q: %w", c.dest, err)
+		}
+		destID = id
+	}
+	dest, err := core.FileByID(destID)
+	if err != nil {
+		return fmt.Errorf("file by id %q: %w", destID, err)
+	}
+	if !dest.IsDir() {
+		destID = dest.Parent
+	}
+	var forEach func(lockbook.ImportFileInfo)
+	if !c.quiet {
+		var total int
+		var count int
+		forEach = func(info lockbook.ImportFileInfo) {
+			switch {
+			case info.Total != 0:
+				total = info.Total
+			case info.DiskPath != "":
+				count++
+				fmt.Printf("(%d/%d) %s ... ", count, total, info.DiskPath)
+			case info.FileDone != nil:
+				fmt.Println("done")
+			}
+		}
+	}
+	err = core.ImportFile(c.diskPath, destID, forEach)
+	if err != nil {
+		return fmt.Errorf("importing '%s': %w", c.diskPath, err)
+	}
+	return nil
 }
 
 // copy a lockbook file to your file system
 //
 // clap:cmd_usage <target> [dest-dir]
 type exportCmd struct {
-	// print out each file as it's being exported
+	// don't output progress on each file
 	//
-	// clap:opt verbose,v
-	verbose bool
+	// clap:opt quiet,q
+	quiet bool
 	// lockbook file path or id
 	//
 	// clap:arg_required
 	target string
-	// disk file path (defaults to working dir)
+	// disk file path (default ".")
 	dest string
 }
 
@@ -59,7 +109,7 @@ func (c *exportCmd) run(core lockbook.Core) error {
 		c.dest = filepath.Join(c.dest, acct.Username)
 	}
 	var forEach func(lockbook.ExportFileInfo)
-	if c.verbose {
+	if !c.quiet {
 		forEach = func(info lockbook.ExportFileInfo) {
 			fmt.Printf("%s\n", info.LbPath)
 		}
@@ -75,6 +125,18 @@ func (c *exportCmd) run(core lockbook.Core) error {
 		return fmt.Errorf("exporting: %w", err)
 	}
 	return nil
+}
+
+// export a lockbook drawing as an image written to stdout
+//
+// clap:cmd_usage <target> [png|jpeg|pnm|tga|farbfeld|bmp]
+type drawingCmd struct {
+	// the drawing to export
+	//
+	// clap:arg_required
+	target string
+	// the format to convert the drawing into
+	imgFmt string
 }
 
 func (c *drawingCmd) run(core lockbook.Core) error {

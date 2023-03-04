@@ -516,8 +516,8 @@ usage:
    export <target> [dest-dir]
 
 options:
-   -v, --verbose   print out each file as it's being exported
-   -h, --help      show this help message
+   -q, --quiet   don't output progress on each file
+   -h, --help    show this help message
 
 arguments:
    <target>   lockbook file path or id
@@ -538,8 +538,8 @@ func (c *exportCmd) parse(args []string) {
 		k, eqv, _ := optParts(args[i][1:])
 
 		switch k {
-		case "verbose", "v":
-			c.verbose = clapParseBool(eqv)
+		case "quiet", "q":
+			c.quiet = clapParseBool(eqv)
 		case "help", "h":
 			exitUsgGood(c)
 		default:
@@ -552,6 +552,55 @@ func (c *exportCmd) parse(args []string) {
 		exitMissingArg(c, "<target>")
 	}
 	c.target = args[0]
+	if len(args) < 2 {
+		return
+	}
+	c.dest = args[1]
+}
+
+func (*importCmd) printUsage(to *os.File) {
+	fmt.Fprintf(to, `%[1]s import - import files into lockbook from your system
+
+usage:
+   import [options] <diskpath> [dest]
+
+options:
+   -q, --quiet   don't output progress on each file
+   -h, --help    show this help message
+
+arguments:
+   <diskpath>   the file(s) to import into lockbook
+   [dest]       where to put the imported files in lockbook
+`, os.Args[0])
+}
+
+func (c *importCmd) parse(args []string) {
+	var i int
+	for ; i < len(args); i++ {
+		if args[i][0] != '-' {
+			break
+		}
+		if args[i] == "--" {
+			i++
+			break
+		}
+		k, eqv, _ := optParts(args[i][1:])
+
+		switch k {
+		case "quiet", "q":
+			c.quiet = clapParseBool(eqv)
+		case "help", "h":
+			exitUsgGood(c)
+		default:
+			claperr("unknown option '%s'\n", k)
+			os.Exit(1)
+		}
+	}
+	args = args[i:]
+	if len(args) < 1 {
+		exitMissingArg(c, "<diskpath>")
+	}
+	c.diskPath = args[0]
 	if len(args) < 2 {
 		return
 	}
@@ -1313,6 +1362,7 @@ subcommands:
    debug     investigative commands mainly intended for devs
    drawing   export a lockbook drawing as an image written to stdout
    export    copy a lockbook file to your file system
+   import    import files into lockbook from your system
    init      create a lockbook account
    ls        list files in a directory
    mkdir     create a directory or do nothing if it exists
@@ -1374,6 +1424,9 @@ func (c *lbcli) parse(args []string) {
 	case "export":
 		c.export = new(exportCmd)
 		c.export.parse(args[i+1:])
+	case "import":
+		c.imprt = new(importCmd)
+		c.imprt.parse(args[i+1:])
 	case "init":
 		c.init = new(initCmd)
 		c.init.parse(args[i+1:])

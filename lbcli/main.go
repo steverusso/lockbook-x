@@ -20,6 +20,7 @@ type lbcli struct {
 	debug   *debugCmd
 	drawing *drawingCmd
 	export  *exportCmd
+	imprt   *importCmd
 	init    *initCmd
 	ls      *lsCmd
 	mkdir   *mkdirCmd
@@ -213,6 +214,8 @@ func run() error {
 		return a.drawing.run(core)
 	case a.export != nil:
 		return a.export.run(core)
+	case a.imprt != nil:
+		return a.imprt.run(core)
 	case a.init != nil:
 		return a.init.run(core)
 	case a.ls != nil:

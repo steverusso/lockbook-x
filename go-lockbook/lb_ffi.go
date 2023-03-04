@@ -4,7 +4,9 @@ package lockbook
 #cgo LDFLAGS: ${SRCDIR}/../target/release/libc_interface_v2.a -lm
 #include "../lockbook_core.h"
 
-extern void go_imex_callback(struct LbExportFileInfo info, void *h);
+extern void go_import_file_callback(struct LbImportFileInfo info, void *h);
+
+extern void go_export_file_callback(struct LbExportFileInfo info, void *h);
 
 extern void go_sync_callback(struct LbSyncProgress sp, void *h);
 */
@@ -159,8 +161,43 @@ func (l *lbCoreFFI) MoveFile(srcID, destID FileID) error {
 	return newErrorOrNilFromC(e)
 }
 
-//export go_imex_callback
-func go_imex_callback(info C.LbExportFileInfo, handlePtr unsafe.Pointer) {
+//export go_import_file_callback
+func go_import_file_callback(info C.LbImportFileInfo, handlePtr unsafe.Pointer) {
+	h := (*C.uintptr_t)(handlePtr)
+	fn := cgo.Handle(*h).Value().(func(C.LbImportFileInfo))
+	fn(info)
+}
+
+func (l *lbCoreFFI) ImportFile(src string, dest FileID, fn func(ImportFileInfo)) error {
+	handle := cgo.NewHandle(func(cInfo C.LbImportFileInfo) {
+		defer C.lb_import_file_info_free(cInfo)
+		if fn == nil {
+			return
+		}
+		info := ImportFileInfo{
+			Total:    int(cInfo.total),
+			DiskPath: C.GoString(cInfo.disk_path),
+		}
+		if cInfo.file_done != nil {
+			f := newFileFromC(cInfo.file_done)
+			info.FileDone = &f
+		}
+		fn(info)
+	})
+	defer handle.Delete()
+	cSrc := C.CString(src)
+	e := C.lb_import_file(l.ref,
+		cSrc,
+		cFileID(dest),
+		C.LbImportFileCallback(C.go_import_file_callback),
+		unsafe.Pointer(&handle),
+	)
+	C.free(unsafe.Pointer(cSrc))
+	return newErrorOrNilFromC(e)
+}
+
+//export go_export_file_callback
+func go_export_file_callback(info C.LbExportFileInfo, handlePtr unsafe.Pointer) {
 	h := (*C.uintptr_t)(handlePtr)
 	fn := cgo.Handle(*h).Value().(func(C.LbExportFileInfo))
 	fn(info)
@@ -168,7 +205,7 @@ func go_imex_callback(info C.LbExportFileInfo, handlePtr unsafe.Pointer) {
 
 func (l *lbCoreFFI) ExportFile(id FileID, dest string, fn func(ExportFileInfo)) error {
 	handle := cgo.NewHandle(func(cInfo C.LbExportFileInfo) {
-		defer C.lb_imex_file_info_free(cInfo)
+		defer C.lb_export_file_info_free(cInfo)
 		if fn == nil {
 			return
 		}
@@ -182,7 +219,7 @@ func (l *lbCoreFFI) ExportFile(id FileID, dest string, fn func(ExportFileInfo)) 
 	e := C.lb_export_file(l.ref,
 		cFileID(id),
 		cDest,
-		C.LbImexCallback(C.go_imex_callback),
+		C.LbExportFileCallback(C.go_export_file_callback),
 		unsafe.Pointer(&handle),
 	)
 	C.free(unsafe.Pointer(cDest))
