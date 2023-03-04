@@ -34,6 +34,7 @@ type Core interface {
 	RenameFile(id FileID, newName string) error
 	MoveFile(srcID, destID FileID) error
 
+	ImportFile(src string, dest FileID, fn func(ImportFileInfo)) error
 	ExportFile(id FileID, dest string, fn func(ExportFileInfo)) error
 	ExportDrawing(id FileID, imgFmt ImageFormat) ([]byte, error)
 
@@ -255,6 +256,16 @@ type UsageItemMetric struct {
 type FileUsage struct {
 	FileID    FileID
 	SizeBytes uint64
+}
+
+// ImportFileInfo is the data sent (via closure) at certain stages of file input. The
+// stage and type of information is determined by the zero value of each field. A non-zero
+// `Total` means a "total calculated" update. A non-empty `DiskPath` means a "file
+// started" update. A non-nil `FileDone` means a "file finished" update.
+type ImportFileInfo struct {
+	Total    int
+	DiskPath string
+	FileDone *File
 }
 
 type ExportFileInfo struct {

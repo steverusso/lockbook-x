@@ -1,4 +1,6 @@
-use lockbook_core::{File, FileType, Share, ShareMode, SupportedImageFormats, Uuid};
+use std::path::PathBuf;
+
+use lockbook_core::{File, FileType, ImportStatus, Share, ShareMode, SupportedImageFormats, Uuid};
 
 use crate::*;
 
@@ -48,9 +50,14 @@ pub unsafe fn lb_file_new(f: File) -> LbFile {
 
 #[no_mangle]
 pub unsafe extern "C" fn lb_file_free(f: LbFile) {
-    libc::free(f.name as *mut c_void);
-    libc::free(f.lastmod_by as *mut c_void);
-    lb_share_list_free(f.shares);
+    let mut f = f;
+    lb_file_free_ptr(&mut f as *mut LbFile);
+}
+
+unsafe fn lb_file_free_ptr(f: *mut LbFile) {
+    libc::free((*f).name as *mut c_void);
+    libc::free((*f).lastmod_by as *mut c_void);
+    lb_share_list_free(&(*f).shares);
 }
 
 /// The zero value represents a document.
@@ -106,7 +113,7 @@ pub unsafe extern "C" fn lb_share_list_index(sl: LbShareList, i: usize) -> *mut 
     sl.list.add(i)
 }
 
-unsafe fn lb_share_list_free(sl: LbShareList) {
+unsafe fn lb_share_list_free(sl: &LbShareList) {
     let list = Vec::from_raw_parts(sl.list, sl.count, sl.count);
     for sh in list {
         libc::free(sh.by as *mut c_void);
@@ -411,6 +418,60 @@ pub unsafe extern "C" fn lb_write_document(
     }
 }
 
+/// The non-zero value of each field determines which type of update this is. So if `total` is
+/// non-zero, this is a "total calculated" update. If there's a `disk_path`, this is a "file
+/// started" update. If there's a `file_done`, this is a "file finished" update.
+#[repr(C)]
+pub struct LbImportFileInfo {
+    pub total: usize,
+    pub disk_path: *mut c_char,
+    pub file_done: *mut LbFile,
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn lb_import_file_info_free(fi: LbImportFileInfo) {
+    if !fi.disk_path.is_null() {
+        libc::free(fi.disk_path as *mut c_void);
+    }
+    if !fi.file_done.is_null() {
+        lb_file_free_ptr(fi.file_done);
+    }
+}
+
+pub type LbImportFileCallback = unsafe extern "C" fn(LbImportFileInfo, *mut c_void);
+
+/// # Safety
+///
+/// The returned value must be passed to `lb_error_free` to avoid a memory leak.
+#[no_mangle]
+pub unsafe extern "C" fn lb_import_file(
+    core: *mut c_void,
+    disk_path: *mut c_char,
+    dest: LbFileId,
+    progress: LbImportFileCallback,
+    user_data: *mut c_void,
+) -> LbError {
+    let src = PathBuf::from(rstr(disk_path));
+    let func = move |info| {
+        let mut c_info = LbImportFileInfo {
+            total: 0,
+            disk_path: null_mut(),
+            file_done: null_mut(),
+        };
+        match info {
+            ImportStatus::CalculatedTotal(total) => c_info.total = total,
+            ImportStatus::StartingItem(p) => c_info.disk_path = cstr(p),
+            ImportStatus::FinishedItem(f) => c_info.file_done = &mut lb_file_new(f),
+        }
+        progress(c_info, user_data);
+    };
+    match core!(core).import_files(&[src], dest.into(), &func) {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
+    }
+}
+
 #[repr(C)]
 pub struct LbExportFileInfo {
     pub disk_path: *mut c_char,
@@ -419,12 +480,12 @@ pub struct LbExportFileInfo {
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn lb_imex_file_info_free(fi: LbExportFileInfo) {
+pub unsafe extern "C" fn lb_export_file_info_free(fi: LbExportFileInfo) {
     libc::free(fi.disk_path as *mut c_void);
     libc::free(fi.lb_path as *mut c_void);
 }
 
-pub type LbImexCallback = unsafe extern "C" fn(LbExportFileInfo, *mut c_void);
+pub type LbExportFileCallback = unsafe extern "C" fn(LbExportFileInfo, *mut c_void);
 
 /// # Safety
 ///
@@ -434,7 +495,7 @@ pub unsafe extern "C" fn lb_export_file(
     core: *mut c_void,
     id: LbFileId,
     dest: *const c_char,
-    progress: LbImexCallback,
+    progress: LbExportFileCallback,
     user_data: *mut c_void,
 ) -> LbError {
     let mut e = lb_error_none();
