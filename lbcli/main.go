@@ -30,65 +30,31 @@ type lbcli struct {
 	rename  *renameCmd
 	rm      *rmCmd
 	share   *shareCmd
-	status  *statusCmd
 	sync    *syncCmd
 	usage   *usageCmd
 	whoami  *whoamiCmd
 	write   *writeCmd
 }
 
-// which operations a sync would perform
-type statusCmd struct{}
-
 // get updates from the server and push changes
 type syncCmd struct {
+	// show last synced and which operations a sync would perform
+	//
+	// clap:opt status,s
+	status bool
 	// output every sync step and progress
 	//
 	// clap:opt verbose,v
 	verbose bool
 }
 
-// local and server disk utilization (uncompressed and compressed)
-//
-// clap:cmd_usage [-e]
-type usageCmd struct {
-	// show amounts in bytes
-	//
-	// clap:opt exact,e
-	exact bool
-}
-
-// print user information for this lockbook
-//
-// clap:cmd_usage [-l]
-type whoamiCmd struct {
-	// prints the data directory and server url as well
-	//
-	// clap:opt long,l
-	long bool
-}
-
-func (statusCmd) run(core lockbook.Core) error {
-	wc, err := core.CalculateWork()
-	if err != nil {
-		return fmt.Errorf("calculating work: %w", err)
-	}
-	for _, wu := range wc.WorkUnits {
-		pushOrPull := "pushed"
-		if wu.Type == lockbook.WorkUnitTypeServer {
-			pushOrPull = "pulled"
-		}
-		fmt.Printf("%s needs to be %s\n", wu.File.Name, pushOrPull)
-	}
-	lastSyncedAt, err := core.GetLastSyncedHumanString()
-	if err != nil {
-		return fmt.Errorf("getting last synced human string: %w", err)
-	}
-	fmt.Printf("last synced: %s\n", lastSyncedAt)
-	return nil
-}
-
 func (c *syncCmd) run(core lockbook.Core) error {
+	if c.status {
+		if err := printSyncStatus(core); err != nil {
+			return fmt.Errorf("getting sync status: %w", err)
+		}
+		return nil
+	}
 	var syncProgress func(lockbook.SyncProgress)
 	if c.verbose {
 		syncProgress = func(sp lockbook.SyncProgress) {
@@ -117,6 +83,36 @@ func (c *syncCmd) run(core lockbook.Core) error {
 	return nil
 }
 
+func printSyncStatus(core lockbook.Core) error {
+	wc, err := core.CalculateWork()
+	if err != nil {
+		return fmt.Errorf("calculating work: %w", err)
+	}
+	for _, wu := range wc.WorkUnits {
+		pushOrPull := "pushed"
+		if wu.Type == lockbook.WorkUnitTypeServer {
+			pushOrPull = "pulled"
+		}
+		fmt.Printf("%s needs to be %s\n", wu.File.Name, pushOrPull)
+	}
+	lastSyncedAt, err := core.GetLastSyncedHumanString()
+	if err != nil {
+		return fmt.Errorf("getting last synced human string: %w", err)
+	}
+	fmt.Printf("last synced: %s\n", lastSyncedAt)
+	return nil
+}
+
+// local and server disk utilization (uncompressed and compressed)
+//
+// clap:cmd_usage [-e]
+type usageCmd struct {
+	// show amounts in bytes
+	//
+	// clap:opt exact,e
+	exact bool
+}
+
 func (c *usageCmd) run(core lockbook.Core) error {
 	u, err := core.GetUsage()
 	if err != nil {
@@ -140,6 +136,16 @@ func (c *usageCmd) run(core lockbook.Core) error {
 	fmt.Printf("server utilization: %s\n", serverUsage)
 	fmt.Printf("server data cap: %s\n", dataCap)
 	return nil
+}
+
+// print user information for this lockbook
+//
+// clap:cmd_usage [-l]
+type whoamiCmd struct {
+	// prints the data directory and server url as well
+	//
+	// clap:opt long,l
+	long bool
 }
 
 func (c *whoamiCmd) run(core lockbook.Core) error {
@@ -181,7 +187,7 @@ func run() error {
 	if a.init == nil && (a.acct == nil || a.acct.restore == nil) {
 		_, err = core.GetAccount()
 		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeAccountNonexistent {
-			return errors.New("no account! run 'init' or 'init --restore' to get started.\n")
+			return errors.New("no account! run 'init' or 'init --restore' to get started.")
 		}
 		if err != nil {
 			return fmt.Errorf("getting account: %v", err)
@@ -244,8 +250,6 @@ func run() error {
 		case a.share.reject != nil:
 			return a.share.reject.run(core)
 		}
-	case a.status != nil:
-		return a.status.run(core)
 	case a.sync != nil:
 		return a.sync.run(core)
 	case a.usage != nil:

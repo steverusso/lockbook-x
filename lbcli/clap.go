@@ -1220,39 +1220,6 @@ func (c *shareCmd) parse(args []string) {
 	}
 }
 
-func (*statusCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s status - which operations a sync would perform
-
-usage:
-   status [options]
-
-options:
-   -h, --help   show this help message
-`, os.Args[0])
-}
-
-func (c *statusCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
-}
-
 func (*syncCmd) printUsage(to *os.File) {
 	fmt.Fprintf(to, `%[1]s sync - get updates from the server and push changes
 
@@ -1260,6 +1227,7 @@ usage:
    sync [options]
 
 options:
+   -s, --status    show last synced and which operations a sync would perform
    -v, --verbose   output every sync step and progress
    -h, --help      show this help message
 `, os.Args[0])
@@ -1278,6 +1246,8 @@ func (c *syncCmd) parse(args []string) {
 		k, eqv, _ := optParts(args[i][1:])
 
 		switch k {
+		case "status", "s":
+			c.status = clapParseBool(eqv)
 		case "verbose", "v":
 			c.verbose = clapParseBool(eqv)
 		case "help", "h":
@@ -1430,7 +1400,6 @@ subcommands:
    rename    rename a file
    rm        delete a file
    share     sharing related commands
-   status    which operations a sync would perform
    sync      get updates from the server and push changes
    usage     local and server disk utilization (uncompressed and compressed)
    whoami    print user information for this lockbook
@@ -1513,9 +1482,6 @@ func (c *lbcli) parse(args []string) {
 	case "share":
 		c.share = new(shareCmd)
 		c.share.parse(args[i+1:])
-	case "status":
-		c.status = new(statusCmd)
-		c.status.parse(args[i+1:])
 	case "sync":
 		c.sync = new(syncCmd)
 		c.sync.parse(args[i+1:])
