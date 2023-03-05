@@ -99,6 +99,9 @@ func (c *acctRestoreCmd) run(core lockbook.Core) error {
 	if err != nil {
 		return fmt.Errorf("trying to read from stdin: %w", err)
 	}
+	if n := len(data); data[n-1] == '\n' {
+		data = data[:n-1]
+	}
 	_, err = core.ImportAccount(string(data))
 	if err != nil {
 		return fmt.Errorf("importing account: %w", err)
