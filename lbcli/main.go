@@ -22,6 +22,7 @@ type lbcli struct {
 	export  *exportCmd
 	imprt   *importCmd
 	init    *initCmd
+	jot     *jotCmd
 	ls      *lsCmd
 	mkdir   *mkdirCmd
 	mkdoc   *mkdocCmd
@@ -218,6 +219,8 @@ func run() error {
 		return a.imprt.run(core)
 	case a.init != nil:
 		return a.init.run(core)
+	case a.jot != nil:
+		return a.jot.run(core)
 	case a.ls != nil:
 		return a.ls.run(core)
 	case a.mkdir != nil:

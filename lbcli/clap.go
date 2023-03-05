@@ -646,6 +646,64 @@ func (c *initCmd) parse(args []string) {
 	}
 }
 
+func (*jotCmd) printUsage(to *os.File) {
+	fmt.Fprintf(to, `%[1]s jot - quickly record brief thoughts
+
+usage:
+   jot [options] <message>
+
+options:
+   -d, --dateit               prepend the date and time to the message
+   -D, --dateit-after         append the date and time to the message
+   -t, --target       <arg>   the target file (defaults to "/jots.md")
+   -h, --help                 show this help message
+
+arguments:
+   <message>   the text you would like to jot down
+`, os.Args[0])
+}
+
+func (c *jotCmd) parse(args []string) {
+	var i int
+	for ; i < len(args); i++ {
+		if args[i][0] != '-' {
+			break
+		}
+		if args[i] == "--" {
+			i++
+			break
+		}
+		k, eqv, hasEq := optParts(args[i][1:])
+
+		switch k {
+		case "dateit", "d":
+			c.dateIt = clapParseBool(eqv)
+		case "dateit-after", "D":
+			c.dateItAfter = clapParseBool(eqv)
+		case "target", "t":
+			if hasEq {
+				c.target = eqv
+			} else if i == len(args)-1 {
+				claperr("string option '%s' needs a value\n", k)
+				os.Exit(1)
+			} else {
+				i++
+				c.target = args[i]
+			}
+		case "help", "h":
+			exitUsgGood(c)
+		default:
+			claperr("unknown option '%s'\n", k)
+			os.Exit(1)
+		}
+	}
+	args = args[i:]
+	if len(args) < 1 {
+		exitMissingArg(c, "<message>")
+	}
+	c.message = args[0]
+}
+
 func (*lsCmd) printUsage(to *os.File) {
 	fmt.Fprintf(to, `%[1]s ls - list files in a directory
 
@@ -1364,6 +1422,7 @@ subcommands:
    export    copy a lockbook file to your file system
    import    import files into lockbook from your system
    init      create a lockbook account
+   jot       quickly record brief thoughts
    ls        list files in a directory
    mkdir     create a directory or do nothing if it exists
    mkdoc     create a document or do nothing if it exists
@@ -1430,6 +1489,9 @@ func (c *lbcli) parse(args []string) {
 	case "init":
 		c.init = new(initCmd)
 		c.init.parse(args[i+1:])
+	case "jot":
+		c.jot = new(jotCmd)
+		c.jot.parse(args[i+1:])
 	case "ls":
 		c.ls = new(lsCmd)
 		c.ls.parse(args[i+1:])
