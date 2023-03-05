@@ -463,61 +463,17 @@ func (c *debugCmd) parse(args []string) {
 	}
 }
 
-func (*drawingCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s drawing - export a lockbook drawing as an image written to stdout
-
-usage:
-   drawing <target> [png|jpeg|pnm|tga|farbfeld|bmp]
-
-options:
-   -h, --help   show this help message
-
-arguments:
-   <target>   the drawing to export
-   [imgfmt]   the format to convert the drawing into
-`, os.Args[0])
-}
-
-func (c *drawingCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<target>")
-	}
-	c.target = args[0]
-	if len(args) < 2 {
-		return
-	}
-	c.imgFmt = args[1]
-}
-
 func (*exportCmd) printUsage(to *os.File) {
 	fmt.Fprintf(to, `%[1]s export - copy a lockbook file to your file system
 
 usage:
-   export <target> [dest-dir]
+   export [--img-fmt <fmt>] <drawing> [dest-dir]
+   export [--quiet] <target> [dest-dir]
 
 options:
-   -q, --quiet   don't output progress on each file
-   -h, --help    show this help message
+   -i, --img-fmt <arg>   format for exporting a lockbook drawing (png|jpeg|pnm|tga|farbfeld|bmp)
+   -q, --quiet           don't output progress on each file
+   -h, --help            show this help message
 
 arguments:
    <target>   lockbook file path or id
@@ -535,9 +491,19 @@ func (c *exportCmd) parse(args []string) {
 			i++
 			break
 		}
-		k, eqv, _ := optParts(args[i][1:])
+		k, eqv, hasEq := optParts(args[i][1:])
 
 		switch k {
+		case "img-fmt", "i":
+			if hasEq {
+				c.imgFmt = eqv
+			} else if i == len(args)-1 {
+				claperr("string option '%s' needs a value\n", k)
+				os.Exit(1)
+			} else {
+				i++
+				c.imgFmt = args[i]
+			}
 		case "quiet", "q":
 			c.quiet = clapParseBool(eqv)
 		case "help", "h":
@@ -1385,25 +1351,24 @@ options:
    -h, --help   show this help message
 
 subcommands:
-   acct      account related commands
-   cat       print one or more documents to stdout
-   debug     investigative commands mainly intended for devs
-   drawing   export a lockbook drawing as an image written to stdout
-   export    copy a lockbook file to your file system
-   import    import files into lockbook from your system
-   init      create a lockbook account
-   jot       quickly record brief thoughts
-   ls        list files in a directory
-   mkdir     create a directory or do nothing if it exists
-   mkdoc     create a document or do nothing if it exists
-   mv        move a file to another parent
-   rename    rename a file
-   rm        delete a file
-   share     sharing related commands
-   sync      get updates from the server and push changes
-   usage     local and server disk utilization (uncompressed and compressed)
-   whoami    print user information for this lockbook
-   write     write data from stdin to a lockbook document
+   acct     account related commands
+   cat      print one or more documents to stdout
+   debug    investigative commands mainly intended for devs
+   export   copy a lockbook file to your file system
+   import   import files into lockbook from your system
+   init     create a lockbook account
+   jot      quickly record brief thoughts
+   ls       list files in a directory
+   mkdir    create a directory or do nothing if it exists
+   mkdoc    create a document or do nothing if it exists
+   mv       move a file to another parent
+   rename   rename a file
+   rm       delete a file
+   share    sharing related commands
+   sync     get updates from the server and push changes
+   usage    local and server disk utilization (uncompressed and compressed)
+   whoami   print user information for this lockbook
+   write    write data from stdin to a lockbook document
 
 run '%[1]s <subcommand> -h' for more information on specific commands.
 `, os.Args[0])
@@ -1446,9 +1411,6 @@ func (c *lbcli) parse(args []string) {
 	case "debug":
 		c.debug = new(debugCmd)
 		c.debug.parse(args[i+1:])
-	case "drawing":
-		c.drawing = new(drawingCmd)
-		c.drawing.parse(args[i+1:])
 	case "export":
 		c.export = new(exportCmd)
 		c.export.parse(args[i+1:])

@@ -15,25 +15,24 @@ const idPrefixLen = 8
 
 // an unofficial lockbook cli implemented in go
 type lbcli struct {
-	acct    *acctCmd
-	cat     *catCmd
-	debug   *debugCmd
-	drawing *drawingCmd
-	export  *exportCmd
-	imprt   *importCmd
-	init    *initCmd
-	jot     *jotCmd
-	ls      *lsCmd
-	mkdir   *mkdirCmd
-	mkdoc   *mkdocCmd
-	mv      *mvCmd
-	rename  *renameCmd
-	rm      *rmCmd
-	share   *shareCmd
-	sync    *syncCmd
-	usage   *usageCmd
-	whoami  *whoamiCmd
-	write   *writeCmd
+	acct   *acctCmd
+	cat    *catCmd
+	debug  *debugCmd
+	export *exportCmd
+	imprt  *importCmd
+	init   *initCmd
+	jot    *jotCmd
+	ls     *lsCmd
+	mkdir  *mkdirCmd
+	mkdoc  *mkdocCmd
+	mv     *mvCmd
+	rename *renameCmd
+	rm     *rmCmd
+	share  *shareCmd
+	sync   *syncCmd
+	usage  *usageCmd
+	whoami *whoamiCmd
+	write  *writeCmd
 }
 
 // get updates from the server and push changes
@@ -217,8 +216,6 @@ func run() error {
 		case a.debug.validate != nil:
 			return a.debug.validate.run(core)
 		}
-	case a.drawing != nil:
-		return a.drawing.run(core)
 	case a.export != nil:
 		return a.export.run(core)
 	case a.imprt != nil:

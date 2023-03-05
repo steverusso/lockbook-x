@@ -231,6 +231,13 @@ func (l *lbCoreFFI) ExportDrawing(id FileID, imgFmt ImageFormat) ([]byte, error)
 	return goBytesResult(r)
 }
 
+func (l *lbCoreFFI) ExportDrawingToDisk(id FileID, imgFmt ImageFormat, dest string) error {
+	cDest := C.CString(dest)
+	e := C.lb_export_drawing_to_disk(l.ref, cFileID(id), C.uchar(imgFmt), cDest)
+	C.free(unsafe.Pointer(cDest))
+	return newErrorOrNilFromC(e)
+}
+
 func (l *lbCoreFFI) GetLastSynced() (time.Time, error) {
 	r := C.lb_get_last_synced(l.ref)
 	if r.err.code != 0 {

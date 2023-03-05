@@ -20,10 +20,8 @@ This differs from the current lockbook c_interface (v1) in a few key ways:
 The following are `lockbook-core` endpoints that have yet to be implemented (roughly in
 order of priority):
 
-* `import_file`
 * `get_drawing`
 * `save_drawing`
-* `export_drawing_to_disk`
 * `get_local_changes`
 * `start_search`
 * `create_link_at_path`

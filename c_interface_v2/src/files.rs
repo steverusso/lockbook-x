@@ -558,6 +558,39 @@ pub unsafe extern "C" fn lb_export_drawing(
 ///
 /// The returned value must be passed to `lb_error_free` to avoid a memory leak.
 #[no_mangle]
+pub unsafe extern "C" fn lb_export_drawing_to_disk(
+    core: *mut c_void,
+    id: LbFileId,
+    fmt_code: u8,
+    dest: *mut c_char,
+) -> LbError {
+    // These values are bound together in a unit test in this crate.
+    let img_fmt = match fmt_code {
+        0 => SupportedImageFormats::Png,
+        1 => SupportedImageFormats::Jpeg,
+        2 => SupportedImageFormats::Pnm,
+        3 => SupportedImageFormats::Tga,
+        4 => SupportedImageFormats::Farbfeld,
+        5 => SupportedImageFormats::Bmp,
+        n => {
+            return LbError {
+                msg: cstr(format!("unknown image format code {}", n)),
+                code: LbErrorCode::Unexpected,
+                trace: null_mut(),
+            }
+        }
+    };
+    let location = rstr(dest);
+    match core!(core).export_drawing_to_disk(id.into(), img_fmt, None, location) {
+        Ok(()) => lb_error_none(),
+        Err(err) => lberr(err),
+    }
+}
+
+/// # Safety
+///
+/// The returned value must be passed to `lb_error_free` to avoid a memory leak.
+#[no_mangle]
 pub unsafe extern "C" fn lb_delete_file(core: *mut c_void, id: LbFileId) -> LbError {
     match core!(core).delete_file(id.into()) {
         Ok(()) => lb_error_none(),

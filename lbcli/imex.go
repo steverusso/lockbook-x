@@ -73,8 +73,13 @@ func (c *importCmd) run(core lockbook.Core) error {
 
 // copy a lockbook file to your file system
 //
-// clap:cmd_usage <target> [dest-dir]
+// clap:cmd_usage [--quiet] <target> [dest-dir]
+// clap:cmd_usage [--img-fmt <fmt>] <drawing> [dest-dir]
 type exportCmd struct {
+	// format for exporting a lockbook drawing (png|jpeg|pnm|tga|farbfeld|bmp)
+	//
+	// clap:opt img-fmt,i
+	imgFmt string
 	// don't output progress on each file
 	//
 	// clap:opt quiet,q
@@ -95,6 +100,16 @@ func (c *exportCmd) run(core lockbook.Core) error {
 	f, err := core.FileByID(id)
 	if err != nil {
 		return fmt.Errorf("file by id %q: %w", id, err)
+	}
+	// Check if we're explicitly exporting a lockbook drawing to an image.
+	if !f.IsDir() && filepath.Ext(f.Name) == "draw" && c.imgFmt != "" {
+		if err := exportDrawing(core, id, c.imgFmt); err != nil {
+			return fmt.Errorf("exporting drawing: %w", err)
+		}
+		return nil
+	}
+	if c.imgFmt != "" {
+		fmt.Fprintln(os.Stderr, "ignoring '--img-fmt' option because target is not a drawing")
 	}
 	// If no destination path is provided, it'll be a file with the target name in the
 	// current directory. If it's root, it'll be the account's username.
@@ -127,26 +142,11 @@ func (c *exportCmd) run(core lockbook.Core) error {
 	return nil
 }
 
-// export a lockbook drawing as an image written to stdout
-//
-// clap:cmd_usage <target> [png|jpeg|pnm|tga|farbfeld|bmp]
-type drawingCmd struct {
-	// the drawing to export
-	//
-	// clap:arg_required
-	target string
-	// the format to convert the drawing into
-	imgFmt string
-}
-
-func (c *drawingCmd) run(core lockbook.Core) error {
-	id, err := idFromSomething(core, c.target)
-	if err != nil {
-		return fmt.Errorf("trying to get id from %q: %w", c.target, err)
-	}
-
-	imgFmtCode := lockbook.ImgFmtPNG
-	switch c.imgFmt {
+func exportDrawing(core lockbook.Core, id lockbook.FileID, imgFmt string) error {
+	var imgFmtCode lockbook.ImageFormat
+	switch imgFmt {
+	case "png":
+		imgFmtCode = lockbook.ImgFmtPNG
 	case "jpg", "jpeg":
 		imgFmtCode = lockbook.ImgFmtJPEG
 	case "pnm":
@@ -158,7 +158,7 @@ func (c *drawingCmd) run(core lockbook.Core) error {
 	case "bmp":
 		imgFmtCode = lockbook.ImgFmtBMP
 	default:
-		fmt.Printf("unknown image format %q, defaulting to png...", c.imgFmt)
+		fmt.Printf("unknown image format %q, defaulting to png...", imgFmt)
 	}
 
 	data, err := core.ExportDrawing(id, imgFmtCode)
