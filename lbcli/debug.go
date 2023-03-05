@@ -12,6 +12,7 @@ import (
 type debugCmd struct {
 	finfo    *debugFinfoCmd
 	validate *debugValidateCmd
+	whoami   *debugWhoamiCmd
 }
 
 // view info about a target file
@@ -21,9 +22,6 @@ type debugFinfoCmd struct {
 	// clap:arg_required
 	target string
 }
-
-// find invalid states within your lockbook
-type debugValidateCmd struct{}
 
 func (c *debugFinfoCmd) run(core lockbook.Core) error {
 	id, err := idFromSomething(core, c.target)
@@ -79,6 +77,9 @@ func printFile(f lockbook.File, myName string) {
 	}
 }
 
+// find invalid states within your lockbook
+type debugValidateCmd struct{}
+
 func (debugValidateCmd) run(core lockbook.Core) error {
 	warnings, err := core.Validate()
 	if err != nil {
@@ -96,5 +97,19 @@ func (debugValidateCmd) run(core lockbook.Core) error {
 	for _, w := range warnings {
 		fmt.Fprintf(os.Stderr, "  %s\n", w)
 	}
+	return nil
+}
+
+// print user information for this lockbook
+type debugWhoamiCmd struct{}
+
+func (debugWhoamiCmd) run(core lockbook.Core) error {
+	acct, err := core.GetAccount()
+	if err != nil {
+		return fmt.Errorf("getting account: %w", err)
+	}
+	fmt.Printf("data-dir: %s\n", core.WriteablePath())
+	fmt.Printf("username: %s\n", acct.Username)
+	fmt.Printf("server:   %s\n", acct.APIURL)
 	return nil
 }

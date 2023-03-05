@@ -31,7 +31,6 @@ type lbcli struct {
 	share  *shareCmd
 	sync   *syncCmd
 	usage  *usageCmd
-	whoami *whoamiCmd
 	write  *writeCmd
 }
 
@@ -137,31 +136,6 @@ func (c *usageCmd) run(core lockbook.Core) error {
 	return nil
 }
 
-// print user information for this lockbook
-//
-// clap:cmd_usage [-l]
-type whoamiCmd struct {
-	// prints the data directory and server url as well
-	//
-	// clap:opt long,l
-	long bool
-}
-
-func (c *whoamiCmd) run(core lockbook.Core) error {
-	acct, err := core.GetAccount()
-	if err != nil {
-		return fmt.Errorf("getting account: %w", err)
-	}
-	if !c.long {
-		fmt.Println(acct.Username)
-		return nil
-	}
-	fmt.Printf("data-dir: %s\n", core.WriteablePath())
-	fmt.Printf("username: %s\n", acct.Username)
-	fmt.Printf("server:   %s\n", acct.APIURL)
-	return nil
-}
-
 func run() error {
 	// Figure out data directory.
 	dataDir := os.Getenv("LOCKBOOK_PATH")
@@ -215,6 +189,8 @@ func run() error {
 			return a.debug.finfo.run(core)
 		case a.debug.validate != nil:
 			return a.debug.validate.run(core)
+		case a.debug.whoami != nil:
+			return a.debug.whoami.run(core)
 		}
 	case a.export != nil:
 		return a.export.run(core)
@@ -251,8 +227,6 @@ func run() error {
 		return a.sync.run(core)
 	case a.usage != nil:
 		return a.usage.run(core)
-	case a.whoami != nil:
-		return a.whoami.run(core)
 	case a.write != nil:
 		return a.write.run(core)
 	}

@@ -412,6 +412,39 @@ func (c *debugValidateCmd) parse(args []string) {
 	}
 }
 
+func (*debugWhoamiCmd) printUsage(to *os.File) {
+	fmt.Fprintf(to, `%[1]s debug whoami - print user information for this lockbook
+
+usage:
+   whoami [options]
+
+options:
+   -h, --help   show this help message
+`, os.Args[0])
+}
+
+func (c *debugWhoamiCmd) parse(args []string) {
+	var i int
+	for ; i < len(args); i++ {
+		if args[i][0] != '-' {
+			break
+		}
+		if args[i] == "--" {
+			i++
+			break
+		}
+		k, _, _ := optParts(args[i][1:])
+
+		switch k {
+		case "help", "h":
+			exitUsgGood(c)
+		default:
+			claperr("unknown option '%s'\n", k)
+			os.Exit(1)
+		}
+	}
+}
+
 func (*debugCmd) printUsage(to *os.File) {
 	fmt.Fprintf(to, `%[1]s debug - investigative commands mainly intended for devs
 
@@ -424,6 +457,7 @@ options:
 subcommands:
    finfo      view info about a target file
    validate   find invalid states within your lockbook
+   whoami     print user information for this lockbook
 `, os.Args[0])
 }
 
@@ -458,6 +492,9 @@ func (c *debugCmd) parse(args []string) {
 	case "validate":
 		c.validate = new(debugValidateCmd)
 		c.validate.parse(args[i+1:])
+	case "whoami":
+		c.whoami = new(debugWhoamiCmd)
+		c.whoami.parse(args[i+1:])
 	default:
 		exitUnknownCmd(c, args[i])
 	}
@@ -621,7 +658,7 @@ usage:
 options:
    -d, --dateit               prepend the date and time to the message
    -D, --dateit-after         append the date and time to the message
-   -t, --target       <arg>   the target file (defaults to "/jots.md")
+   -t, --target       <arg>   the target file (defaults to "/scratch.md")
    -h, --help                 show this help message
 
 arguments:
@@ -1261,42 +1298,6 @@ func (c *usageCmd) parse(args []string) {
 	}
 }
 
-func (*whoamiCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s whoami - print user information for this lockbook
-
-usage:
-   whoami [-l]
-
-options:
-   -l, --long   prints the data directory and server url as well
-   -h, --help   show this help message
-`, os.Args[0])
-}
-
-func (c *whoamiCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "long", "l":
-			c.long = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
-}
-
 func (*writeCmd) printUsage(to *os.File) {
 	fmt.Fprintf(to, `%[1]s write - write data from stdin to a lockbook document
 
@@ -1367,7 +1368,6 @@ subcommands:
    share    sharing related commands
    sync     get updates from the server and push changes
    usage    local and server disk utilization (uncompressed and compressed)
-   whoami   print user information for this lockbook
    write    write data from stdin to a lockbook document
 
 run '%[1]s <subcommand> -h' for more information on specific commands.
@@ -1450,9 +1450,6 @@ func (c *lbcli) parse(args []string) {
 	case "usage":
 		c.usage = new(usageCmd)
 		c.usage.parse(args[i+1:])
-	case "whoami":
-		c.whoami = new(whoamiCmd)
-		c.whoami.parse(args[i+1:])
 	case "write":
 		c.write = new(writeCmd)
 		c.write.parse(args[i+1:])
