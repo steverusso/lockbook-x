@@ -529,16 +529,10 @@ pub unsafe extern "C" fn lb_export_drawing(
 ) -> LbBytesResult {
     let mut r = lb_bytes_result_new();
     // These values are bound together in a unit test in this crate.
-    let img_fmt = match fmt_code {
-        0 => SupportedImageFormats::Png,
-        1 => SupportedImageFormats::Jpeg,
-        2 => SupportedImageFormats::Pnm,
-        3 => SupportedImageFormats::Tga,
-        4 => SupportedImageFormats::Farbfeld,
-        5 => SupportedImageFormats::Bmp,
-        n => {
-            r.err.msg = cstr(format!("unknown image format code {}", n));
-            r.err.code = LbErrorCode::Unexpected;
+    let img_fmt = match get_img_fmt_code(fmt_code) {
+        Ok(v) => v,
+        Err(err) => {
+            r.err = err;
             return r;
         }
     };
@@ -565,25 +559,30 @@ pub unsafe extern "C" fn lb_export_drawing_to_disk(
     dest: *mut c_char,
 ) -> LbError {
     // These values are bound together in a unit test in this crate.
-    let img_fmt = match fmt_code {
-        0 => SupportedImageFormats::Png,
-        1 => SupportedImageFormats::Jpeg,
-        2 => SupportedImageFormats::Pnm,
-        3 => SupportedImageFormats::Tga,
-        4 => SupportedImageFormats::Farbfeld,
-        5 => SupportedImageFormats::Bmp,
-        n => {
-            return LbError {
-                msg: cstr(format!("unknown image format code {}", n)),
-                code: LbErrorCode::Unexpected,
-                trace: null_mut(),
-            }
-        }
+    let img_fmt = match get_img_fmt_code(fmt_code) {
+        Ok(v) => v,
+        Err(err) => return err,
     };
     let location = rstr(dest);
     match core!(core).export_drawing_to_disk(id.into(), img_fmt, None, location) {
         Ok(()) => lb_error_none(),
         Err(err) => lberr(err),
+    }
+}
+
+unsafe fn get_img_fmt_code(n: u8) -> Result<SupportedImageFormats, LbError> {
+    match n {
+        0 => Ok(SupportedImageFormats::Png),
+        1 => Ok(SupportedImageFormats::Jpeg),
+        2 => Ok(SupportedImageFormats::Pnm),
+        3 => Ok(SupportedImageFormats::Tga),
+        4 => Ok(SupportedImageFormats::Farbfeld),
+        5 => Ok(SupportedImageFormats::Bmp),
+        n => Err(LbError {
+            msg: cstr(format!("unknown image format code {}", n)),
+            code: LbErrorCode::Unexpected,
+            trace: null_mut(),
+        }),
     }
 }
 
