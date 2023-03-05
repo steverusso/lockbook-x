@@ -9,17 +9,6 @@ import (
 	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-func maybeFileByPath(core lockbook.Core, p string) (lockbook.File, bool, error) {
-	f, err := core.FileByPath(p)
-	if err != nil {
-		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeFileNonexistent {
-			return lockbook.File{}, false, nil
-		}
-		return lockbook.File{}, false, err
-	}
-	return f, true, nil
-}
-
 func idFromSomething(core lockbook.Core, v string) (uuid.UUID, error) {
 	if id := uuid.FromStringOrNil(v); !id.IsNil() {
 		return id, nil

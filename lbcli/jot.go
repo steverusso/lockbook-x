@@ -31,7 +31,7 @@ func (j *jotCmd) run(core lockbook.Core) error {
 	var targetID lockbook.FileID
 	if j.target == "" {
 		// Create a doc named "scratch.md" in root if it doesn't exist.
-		f, ok, err := maybeFileByPath(core, "/scratch.md")
+		f, ok, err := lockbook.MaybeFileByPath(core, "/scratch.md")
 		if err != nil {
 			return fmt.Errorf("getting scratch file by path: %w", err)
 		}

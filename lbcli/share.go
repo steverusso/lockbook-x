@@ -121,7 +121,7 @@ func (c *shareAcceptCmd) run(core lockbook.Core) error {
 	} else {
 		// If the destination path exists, it must be a directory. The link will be
 		// dropped in it.
-		f, exists, err := maybeFileByPath(core, c.dest)
+		f, exists, err := lockbook.MaybeFileByPath(core, c.dest)
 		if err != nil {
 			return fmt.Errorf("file by path %q: %w", c.dest, err)
 		}

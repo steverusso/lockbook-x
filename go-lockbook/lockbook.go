@@ -356,3 +356,14 @@ func (s AppStoreAccountState) String() string {
 		return "AppStoreAccountState(" + strconv.FormatInt(int64(s), 10) + ")"
 	}
 }
+
+func MaybeFileByPath(core Core, p string) (File, bool, error) {
+	f, err := core.FileByPath(p)
+	if err != nil {
+		if err, ok := err.(*Error); ok && err.Code == CodeFileNonexistent {
+			return File{}, false, nil
+		}
+		return File{}, false, err
+	}
+	return f, true, nil
+}
