@@ -19,6 +19,20 @@ type shareCmd struct {
 	reject  *shareRejectCmd
 }
 
+func (s *shareCmd) run(core lockbook.Core) error {
+	switch {
+	case s.create != nil:
+		return s.create.run(core)
+	case s.pending != nil:
+		return s.pending.run(core)
+	case s.accept != nil:
+		return s.accept.run(core)
+	case s.reject != nil:
+		return s.reject.run(core)
+	}
+	return nil
+}
+
 // share a file with another lockbook user
 type shareCreateCmd struct {
 	// the other user will not be able to edit the file

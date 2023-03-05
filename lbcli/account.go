@@ -21,6 +21,22 @@ type acctCmd struct {
 	unsubscribe *acctUnsubscribeCmd
 }
 
+func (a *acctCmd) run(core lockbook.Core) error {
+	switch {
+	case a.restore != nil:
+		return a.restore.run(core)
+	case a.privkey != nil:
+		return a.privkey.run(core)
+	case a.status != nil:
+		return a.status.run(core)
+	case a.subscribe != nil:
+		return a.subscribe.run(core)
+	case a.unsubscribe != nil:
+		return a.unsubscribe.run(core)
+	}
+	return nil
+}
+
 // restore an existing account from its secret account string
 type acctRestoreCmd struct {
 	// don't perform the initial sync

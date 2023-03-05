@@ -67,10 +67,6 @@ func (j *jotCmd) run(core lockbook.Core) error {
 		}
 	}
 
-	if j.dateIt {
-		j.message = "(" + time.Now().Format("Mon, 2 Jan 2006 15:04") + ") " + j.message
-	}
-
 	// Prepend two new lines if the last chars aren't new lines already.
 	n := len(scratchContent)
 	if n > 0 && scratchContent[n-1] != '\n' {

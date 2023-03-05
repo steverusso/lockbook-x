@@ -196,11 +196,11 @@ func run() error {
 		return fmt.Errorf("initializing core: %v", err)
 	}
 
-	a := lbcli{}
-	a.parse(os.Args)
+	lb := lbcli{}
+	lb.parse(os.Args)
 
 	// Check for an account before every command besides `init`.
-	if a.init == nil && (a.acct == nil || a.acct.restore == nil) {
+	if lb.init == nil && (lb.acct == nil || lb.acct.restore == nil) {
 		_, err = core.GetAccount()
 		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeAccountNonexistent {
 			return errors.New("no account! run 'init' or 'init --restore' to get started.")
@@ -211,67 +211,40 @@ func run() error {
 	}
 
 	switch {
-	case a.acct != nil:
-		switch {
-		case a.acct.restore != nil:
-			return a.acct.restore.run(core)
-		case a.acct.privkey != nil:
-			return a.acct.privkey.run(core)
-		case a.acct.status != nil:
-			return a.acct.status.run(core)
-		case a.acct.subscribe != nil:
-			return a.acct.subscribe.run(core)
-		case a.acct.unsubscribe != nil:
-			return a.acct.unsubscribe.run(core)
-		}
-	case a.cat != nil:
-		return a.cat.run(core)
-	case a.debug != nil:
-		switch {
-		case a.debug.finfo != nil:
-			return a.debug.finfo.run(core)
-		case a.debug.validate != nil:
-			return a.debug.validate.run(core)
-		case a.debug.whoami != nil:
-			return a.debug.whoami.run(core)
-		}
-	case a.export != nil:
-		return a.export.run(core)
-	case a.imprt != nil:
-		return a.imprt.run(core)
-	case a.init != nil:
-		return a.init.run(core)
-	case a.jot != nil:
-		return a.jot.run(core)
-	case a.ls != nil:
-		return a.ls.run(core)
-	case a.mkdir != nil:
-		return a.mkdir.run(core)
-	case a.mkdoc != nil:
-		return a.mkdoc.run(core)
-	case a.mv != nil:
-		return a.mv.run(core)
-	case a.rename != nil:
-		return a.rename.run(core)
-	case a.rm != nil:
-		return a.rm.run(core)
-	case a.share != nil:
-		switch {
-		case a.share.create != nil:
-			return a.share.create.run(core)
-		case a.share.pending != nil:
-			return a.share.pending.run(core)
-		case a.share.accept != nil:
-			return a.share.accept.run(core)
-		case a.share.reject != nil:
-			return a.share.reject.run(core)
-		}
-	case a.sync != nil:
-		return a.sync.run(core)
-	case a.usage != nil:
-		return a.usage.run(core)
-	case a.write != nil:
-		return a.write.run(core)
+	case lb.acct != nil:
+		return lb.acct.run(core)
+	case lb.cat != nil:
+		return lb.cat.run(core)
+	case lb.debug != nil:
+		return lb.debug.run(core)
+	case lb.export != nil:
+		return lb.export.run(core)
+	case lb.imprt != nil:
+		return lb.imprt.run(core)
+	case lb.init != nil:
+		return lb.init.run(core)
+	case lb.jot != nil:
+		return lb.jot.run(core)
+	case lb.ls != nil:
+		return lb.ls.run(core)
+	case lb.mkdir != nil:
+		return lb.mkdir.run(core)
+	case lb.mkdoc != nil:
+		return lb.mkdoc.run(core)
+	case lb.mv != nil:
+		return lb.mv.run(core)
+	case lb.rename != nil:
+		return lb.rename.run(core)
+	case lb.rm != nil:
+		return lb.rm.run(core)
+	case lb.share != nil:
+		return lb.share.run(core)
+	case lb.sync != nil:
+		return lb.sync.run(core)
+	case lb.usage != nil:
+		return lb.usage.run(core)
+	case lb.write != nil:
+		return lb.write.run(core)
 	}
 	return nil
 }

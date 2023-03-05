@@ -15,6 +15,18 @@ type debugCmd struct {
 	whoami   *debugWhoamiCmd
 }
 
+func (d *debugCmd) run(core lockbook.Core) error {
+	switch {
+	case d.finfo != nil:
+		return d.finfo.run(core)
+	case d.validate != nil:
+		return d.validate.run(core)
+	case d.whoami != nil:
+		return d.whoami.run(core)
+	}
+	return nil
+}
+
 // view info about a target file
 type debugFinfoCmd struct {
 	// the target can be a file path, uuid, or uuid prefix
