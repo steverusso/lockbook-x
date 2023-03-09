@@ -197,7 +197,7 @@ func (ls *lsCmd) run(core lockbook.Core) error {
 	}
 	idWidth := idPrefixLen
 	if ls.fullIDs {
-		idWidth = len(f.ID)
+		idWidth = len(f.ID.String())
 	}
 	cfg := lsConfig{
 		myName:   acct.Username,
