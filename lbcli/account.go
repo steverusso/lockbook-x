@@ -10,7 +10,7 @@ import (
 	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-// account related commands
+// Account related commands.
 //
 // clap:cmd_usage <command> [args...]
 type acctCmd struct {
@@ -33,37 +33,42 @@ func (a *acctCmd) run(core lockbook.Core) error {
 		return a.subscribe.run(core)
 	case a.unsubscribe != nil:
 		return a.unsubscribe.run(core)
+	default:
+		return nil
 	}
-	return nil
 }
 
-// restore an existing account from its secret account string
+// Restore an existing account from its secret account string.
+//
+// The restore command reads the secret account string from standard input (stdin).
+// In other words, pipe your account string to this command like:
+// 'cat lbkey.txt | lbcli restore'.
 type acctRestoreCmd struct {
-	// don't perform the initial sync
+	// Don't perform the initial sync.
 	//
 	// clap:opt no-sync
 	noSync bool
 }
 
-// print out the private key for this lockbook
+// Print out the private key for this lockbook.
 type acctPrivKeyCmd struct{}
 
-// overview of your account
+// Overview of your account.
 type acctStatusCmd struct{}
 
-// create a new subscription with a credit card
+// Create a new subscription with a credit card.
 type acctSubscribeCmd struct{}
 
-// cancel an existing subscription
+// Cancel an existing subscription.
 type acctUnsubscribeCmd struct{}
 
-// create a lockbook account
+// Create a lockbook account.
 type initCmd struct {
-	// include the welcome document
+	// Include the welcome document.
 	//
 	// clap:opt welcome
 	welcome bool
-	// don't perform the initial sync
+	// Don't perform the initial sync.
 	//
 	// clap:opt no-sync
 	noSync bool

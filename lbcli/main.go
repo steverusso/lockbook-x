@@ -15,7 +15,7 @@ const idPrefixLen = 8
 
 //go:generate goclap -type lbcli
 
-// an unofficial lockbook cli implemented in go
+// An unofficial lockbook cli.
 type lbcli struct {
 	acct   *acctCmd
 	cat    *catCmd
@@ -36,13 +36,13 @@ type lbcli struct {
 	write  *writeCmd
 }
 
-// get updates from the server and push changes
+// Get updates from the server and push changes.
 type syncCmd struct {
-	// show last synced and which operations a sync would perform
+	// Show last synced and which operations a sync would perform.
 	//
 	// clap:opt status,s
 	status bool
-	// output every sync step and progress
+	// Output every sync step and progress.
 	//
 	// clap:opt verbose,v
 	verbose bool
@@ -103,11 +103,11 @@ func printSyncStatus(core lockbook.Core) error {
 	return nil
 }
 
-// local and server disk utilization (uncompressed and compressed)
+// Local and server disk utilization (uncompressed and compressed).
 //
 // clap:cmd_usage [-e]
 type usageCmd struct {
-	// show amounts in bytes
+	// Show amounts in bytes instead of as human readable values.
 	//
 	// clap:opt exact,e
 	exact bool

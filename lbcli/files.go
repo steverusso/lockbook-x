@@ -9,81 +9,81 @@ import (
 	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-// print one or more documents to stdout
+// Print a document's content.
 type catCmd struct {
-	// lockbook file path or id
+	// Lockbook file path or ID.
 	//
 	// clap:arg_required
 	target string
 }
 
-// create a directory or do nothing if it exists
+// Create a directory or do nothing if it exists.
 type mkdirCmd struct {
-	// a path at which to create the directory
+	// The path at which to create the directory.
 	//
 	// clap:arg_required
 	path string
 }
 
-// create a document or do nothing if it exists
+// Create a document or do nothing if it exists.
 type mkdocCmd struct {
-	// a path at which to create the document
+	// The path at which to create the document.
 	//
 	// clap:arg_required
 	path string
 }
 
-// move a file to another parent
+// Move a file to another parent.
 type mvCmd struct {
-	// the file to move
+	// The file to move.
 	//
 	// clap:arg_required
 	src string
-	// the destination directory
+	// The destination directory.
 	//
 	// clap:arg_required
 	dest string
 }
 
-// rename a file
+// Rename a file.
 //
 // clap:cmd_usage [-f] <target> [new-name]
 type renameCmd struct {
-	// non-interactive (fail instead of prompting for corrections)
+	// Non-interactive (fail instead of prompting for corrections).
 	//
 	// clap:opt force,f
 	force bool
-	// the file to rename
+	// The file to rename.
 	//
 	// clap:arg_required
 	target string
-	// the desired new name
+	// The desired new name.
 	//
 	// clap:arg_required
 	newName string
 }
 
-// delete a file
+// Delete a file.
 type rmCmd struct {
-	// don't prompt for confirmation
+	// Don't prompt for confirmation.
 	//
 	// clap:opt force,f
 	force bool
-	// lockbook path or id to delete
+	// Lockbook path or ID to delete.
 	//
 	// clap:arg_required
 	target string
 }
 
-// write data from stdin to a lockbook document
+// Write data from stdin to a lockbook document.
 //
 // clap:cmd_usage [--trunc] <target>
 type writeCmd struct {
-	// truncate the file instead of appending to it
+	// Truncate the file instead of appending to it.
 	//
 	// clap:opt trunc
 	trunc bool
-	// lockbook path or id to write
+	// Lockbook path or ID to write.
 	//
 	// clap:arg_required
 	target string

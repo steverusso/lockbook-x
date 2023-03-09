@@ -8,33 +8,33 @@ import (
 	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-// list files in a directory
+// List files in a directory.
 type lsCmd struct {
-	// just display the name (or file path)
+	// Just display the name (or file path).
 	//
 	// clap:opt short,s
 	short bool
-	// recursively include all children of the target directory
+	// Recursively include all children of the target directory.
 	//
 	// clap:opt recursive,r
 	recursive bool
-	// show absolute file paths instead of file names
+	// Show absolute file paths instead of file names.
 	//
 	// clap:opt paths
 	paths bool
-	// only show folders
+	// Only show folders.
 	//
 	// clap:opt dirs
 	onlyDirs bool
-	// only show documents
+	// Only show documents.
 	//
 	// clap:opt docs
 	onlyDocs bool
-	// show full uuids instead of prefixes
+	// Show full UUIDs instead of prefixes.
 	//
 	// clap:opt ids
 	fullIDs bool
-	// target directory (defaults to root)
+	// Target directory (defaults to root).
 	target string
 }
 

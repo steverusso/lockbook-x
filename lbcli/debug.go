@@ -8,7 +8,7 @@ import (
 	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-// investigative commands mainly intended for devs
+// Investigative commands mainly intended for devs.
 type debugCmd struct {
 	finfo    *debugFinfoCmd
 	validate *debugValidateCmd
@@ -23,13 +23,14 @@ func (d *debugCmd) run(core lockbook.Core) error {
 		return d.validate.run(core)
 	case d.whoami != nil:
 		return d.whoami.run(core)
+	default:
+		return nil
 	}
-	return nil
 }
 
-// view info about a target file
+// View info about a target file.
 type debugFinfoCmd struct {
-	// the target can be a file path, uuid, or uuid prefix
+	// The target can be a file path, UUID, or UUID prefix.
 	//
 	// clap:arg_required
 	target string
@@ -89,7 +90,7 @@ func printFile(f lockbook.File, myName string) {
 	}
 }
 
-// find invalid states within your lockbook
+// Find invalid states within your lockbook.
 type debugValidateCmd struct{}
 
 func (debugValidateCmd) run(core lockbook.Core) error {
@@ -112,7 +113,7 @@ func (debugValidateCmd) run(core lockbook.Core) error {
 	return nil
 }
 
-// print user information for this lockbook
+// Print user information for this lockbook.
 type debugWhoamiCmd struct{}
 
 func (debugWhoamiCmd) run(core lockbook.Core) error {

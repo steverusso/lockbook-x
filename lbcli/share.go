@@ -11,7 +11,7 @@ import (
 	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-// sharing related commands
+// Sharing related commands.
 type shareCmd struct {
 	create  *shareCreateCmd
 	pending *sharePendingCmd
@@ -29,51 +29,52 @@ func (s *shareCmd) run(core lockbook.Core) error {
 		return s.accept.run(core)
 	case s.reject != nil:
 		return s.reject.run(core)
+	default:
+		return nil
 	}
-	return nil
 }
 
-// share a file with another lockbook user
+// Share a file with another lockbook user.
 type shareCreateCmd struct {
-	// the other user will not be able to edit the file
+	// The other user will not be able to edit the file.
 	//
 	// clap:opt ro
 	readOnly bool
-	// the path or id of the lockbook file you'd like to share
+	// The path or ID of the lockbook file you'd like to share.
 	//
 	// clap:arg_required
 	target string
-	// the username of the other lockbook user
+	// The username of the other lockbook user.
 	//
 	// clap:arg_required
 	username string
 }
 
-// list pending shares
+// List pending shares.
 type sharePendingCmd struct {
-	// print full uuids instead of prefixes
+	// Print full UUIDs instead of prefixes.
 	//
 	// clap:opt ids
 	fullIDs bool
 }
 
-// accept a pending share
+// Accept a pending share.
 type shareAcceptCmd struct {
-	// id or id prefix of the pending share to accept
+	// The ID or ID prefix of a pending share.
 	//
 	// clap:arg_required
 	target string
-	// where to place this in your file tree
+	// Where to place this in your file tree.
 	//
 	// clap:arg_required
 	dest string
-	// name this file something else
+	// Name this file something else.
 	newName string
 }
 
-// reject a pending share
+// Reject a pending share.
 type shareRejectCmd struct {
-	// id or id prefix of a pending share
+	// The ID or ID prefix of a pending share.
 	//
 	// clap:arg_required
 	target string

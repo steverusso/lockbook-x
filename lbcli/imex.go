@@ -9,19 +9,19 @@ import (
 	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-// import files into lockbook from your system
+// Import files into lockbook from your system.
 //
 // clap:cmd_name import
 type importCmd struct {
-	// don't output progress on each file
+	// Don't output progress on each file.
 	//
 	// clap:opt quiet,q
 	quiet bool
-	// the file(s) to import into lockbook
+	// The file to import into lockbook.
 	//
 	// clap:arg_required
 	diskPath string
-	// where to put the imported files in lockbook
+	// Where to put the imported files in lockbook.
 	dest string
 }
 
@@ -71,24 +71,24 @@ func (c *importCmd) run(core lockbook.Core) error {
 	return nil
 }
 
-// copy a lockbook file to your file system
+// Copy a lockbook file to your file system.
 //
 // clap:cmd_usage [--quiet] <target> [dest-dir]
 // clap:cmd_usage [--img-fmt <fmt>] <drawing> [dest-dir]
 type exportCmd struct {
-	// format for exporting a lockbook drawing (png|jpeg|pnm|tga|farbfeld|bmp)
+	// Format for exporting a lockbook drawing (png|jpeg|pnm|tga|farbfeld|bmp).
 	//
 	// clap:opt img-fmt,i
 	imgFmt string
-	// don't output progress on each file
+	// Don't output progress on each file.
 	//
 	// clap:opt quiet,q
 	quiet bool
-	// lockbook file path or id
+	// Lockbook file path or ID.
 	//
 	// clap:arg_required
 	target string
-	// disk file path (default ".")
+	// Disk file path (default ".").
 	dest string
 }
 

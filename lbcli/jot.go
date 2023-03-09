@@ -7,21 +7,21 @@ import (
 	"github.com/steverusso/lockbook-x/go-lockbook"
 )
 
-// quickly record brief thoughts
+// Quickly record brief thoughts.
 type jotCmd struct {
-	// prepend the date and time to the message
+	// Prepend the date and time to the message.
 	//
 	// clap:opt dateit,d
 	dateIt bool
-	// append the date and time to the message
+	// Append the date and time to the message.
 	//
 	// clap:opt dateit-after,D
 	dateItAfter bool
-	// the target file (defaults to "/scratch.md")
+	// The target file (defaults to "/scratch.md").
 	//
 	// clap:opt target,t
 	target string
-	// the text you would like to jot down
+	// The text you would like to jot down.
 	//
 	// clap:arg_required
 	message string
