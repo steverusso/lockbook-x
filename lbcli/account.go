@@ -14,6 +14,7 @@ import (
 //
 // clap:cmd_usage <command> [args...]
 type acctCmd struct {
+	init        *acctInitCmd
 	restore     *acctRestoreCmd
 	privkey     *acctPrivKeyCmd
 	status      *acctStatusCmd
@@ -23,6 +24,8 @@ type acctCmd struct {
 
 func (a *acctCmd) run(core lockbook.Core) error {
 	switch {
+	case a.init != nil:
+		return a.init.run(core)
 	case a.restore != nil:
 		return a.restore.run(core)
 	case a.privkey != nil:
@@ -63,7 +66,7 @@ type acctSubscribeCmd struct{}
 type acctUnsubscribeCmd struct{}
 
 // Create a lockbook account.
-type initCmd struct {
+type acctInitCmd struct {
 	// Include the welcome document.
 	//
 	// clap:opt welcome
@@ -74,7 +77,7 @@ type initCmd struct {
 	noSync bool
 }
 
-func (c *initCmd) run(core lockbook.Core) error {
+func (c *acctInitCmd) run(core lockbook.Core) error {
 	fi, err := os.Stdin.Stat()
 	if err != nil {
 		panic(err)

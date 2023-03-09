@@ -66,6 +66,45 @@ func optParts(arg string) (string, string, bool) {
 	return arg, "", false
 }
 
+func (*acctInitCmd) printUsage(to *os.File) {
+	fmt.Fprintf(to, `%[1]s acct init - create a lockbook account
+
+usage:
+   init [options]
+
+options:
+       --welcome   include the welcome document
+       --no-sync   don't perform the initial sync
+   -h, --help      show this help message
+`, os.Args[0])
+}
+
+func (c *acctInitCmd) parse(args []string) {
+	var i int
+	for ; i < len(args); i++ {
+		if args[i][0] != '-' {
+			break
+		}
+		if args[i] == "--" {
+			i++
+			break
+		}
+		k, eqv, _ := optParts(args[i][1:])
+
+		switch k {
+		case "welcome":
+			c.welcome = clapParseBool(eqv)
+		case "no-sync":
+			c.noSync = clapParseBool(eqv)
+		case "help", "h":
+			exitUsgGood(c)
+		default:
+			claperr("unknown option '%s'\n", k)
+			os.Exit(1)
+		}
+	}
+}
+
 func (*acctRestoreCmd) printUsage(to *os.File) {
 	fmt.Fprintf(to, `%[1]s acct restore - restore an existing account from its secret account string
 
@@ -249,6 +288,7 @@ options:
    -h, --help   show this help message
 
 subcommands:
+   init          create a lockbook account
    restore       restore an existing account from its secret account string
    privkey       print out the private key for this lockbook
    status        overview of your account
@@ -282,6 +322,9 @@ func (c *acctCmd) parse(args []string) {
 		os.Exit(1)
 	}
 	switch args[i] {
+	case "init":
+		c.init = new(acctInitCmd)
+		c.init.parse(args[i+1:])
 	case "restore":
 		c.restore = new(acctRestoreCmd)
 		c.restore.parse(args[i+1:])
@@ -613,45 +656,6 @@ func (c *importCmd) parse(args []string) {
 		return
 	}
 	c.dest = args[1]
-}
-
-func (*initCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s init - create a lockbook account
-
-usage:
-   init [options]
-
-options:
-       --welcome   include the welcome document
-       --no-sync   don't perform the initial sync
-   -h, --help      show this help message
-`, os.Args[0])
-}
-
-func (c *initCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "welcome":
-			c.welcome = clapParseBool(eqv)
-		case "no-sync":
-			c.noSync = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
 }
 
 func (*jotCmd) printUsage(to *os.File) {
@@ -1362,7 +1366,6 @@ subcommands:
    debug    investigative commands mainly intended for devs
    export   copy a lockbook file to your file system
    import   import files into lockbook from your system
-   init     create a lockbook account
    jot      quickly record brief thoughts
    ls       list files in a directory
    mkdir    create a directory or do nothing if it exists
@@ -1422,9 +1425,6 @@ func (c *lbcli) parse(args []string) {
 	case "import":
 		c.imprt = new(importCmd)
 		c.imprt.parse(args[i+1:])
-	case "init":
-		c.init = new(initCmd)
-		c.init.parse(args[i+1:])
 	case "jot":
 		c.jot = new(jotCmd)
 		c.jot.parse(args[i+1:])

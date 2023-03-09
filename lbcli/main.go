@@ -22,7 +22,6 @@ type lbcli struct {
 	debug  *debugCmd
 	export *exportCmd
 	imprt  *importCmd
-	init   *initCmd
 	jot    *jotCmd
 	ls     *lsCmd
 	mkdir  *mkdirCmd
@@ -199,11 +198,11 @@ func run() error {
 	lb := lbcli{}
 	lb.parse(os.Args)
 
-	// Check for an account before every command besides `init`.
-	if lb.init == nil && (lb.acct == nil || lb.acct.restore == nil) {
+	// Check for an account before every command besides `init` or `restore`.
+	if lb.acct == nil || lb.acct.init == nil || lb.acct.restore == nil {
 		_, err = core.GetAccount()
 		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeAccountNonexistent {
-			return errors.New("no account! run 'init' or 'init --restore' to get started.")
+			return errors.New("no account! run 'acct init' or 'acct restore' to get started.")
 		}
 		if err != nil {
 			return fmt.Errorf("getting account: %v", err)
@@ -221,8 +220,6 @@ func run() error {
 		return lb.export.run(core)
 	case lb.imprt != nil:
 		return lb.imprt.run(core)
-	case lb.init != nil:
-		return lb.init.run(core)
 	case lb.jot != nil:
 		return lb.jot.run(core)
 	case lb.ls != nil:
