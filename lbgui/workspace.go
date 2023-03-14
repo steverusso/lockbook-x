@@ -23,6 +23,13 @@ const (
 	autoSaveInterval = time.Second * 3
 )
 
+type wsLayoutMode uint8
+
+const (
+	wsLayoutModeTree wsLayoutMode = iota
+	wsLayoutModeExpl
+)
+
 type wsAnimStage int
 
 const (
@@ -56,6 +63,11 @@ type (
 		files   []lockbook.File
 		err     error
 	}
+	openDirTreeResult struct {
+		id    lockbook.FileID
+		files []lockbook.File
+		err   error
+	}
 	openFileResult struct {
 		id   lockbook.FileID
 		data []byte
@@ -77,27 +89,32 @@ type (
 	}
 )
 
-func (openDirResult) implsWsUpdate()  {}
-func (openFileResult) implsWsUpdate() {}
-func (autoSaveScan) implsWsUpdate()   {}
-func (queuedSave) implsWsUpdate()     {}
-func (completedSave) implsWsUpdate()  {}
-func (startSync) implsWsUpdate()      {}
-func (syncResult) implsWsUpdate()     {}
+func (openDirResult) implsWsUpdate()     {}
+func (openDirTreeResult) implsWsUpdate() {}
+func (openFileResult) implsWsUpdate()    {}
+func (autoSaveScan) implsWsUpdate()      {}
+func (queuedSave) implsWsUpdate()        {}
+func (completedSave) implsWsUpdate()     {}
+func (startSync) implsWsUpdate()         {}
+func (syncResult) implsWsUpdate()        {}
 
 type workspace struct {
+	mode       wsLayoutMode
 	core       lockbook.Core
 	updates    chan<- legitUpdate
-	animStage  wsAnimStage
-	animPct    float32
 	tabs       []tab
 	activeTab  int
 	tabList    widget.List
-	expl       fileExplorer
 	bgErrs     []error
-	botStatus  string
 	modals     []modal
 	modalCatch gesture.Click
+
+	tree fileTree
+
+	expl      fileExplorer
+	animStage wsAnimStage
+	animPct   float32
+	botStatus string
 
 	saveQueue     queue[saveRequest]
 	lastActionAt  time.Time
@@ -121,6 +138,9 @@ func newWorkspace(updates chan<- legitUpdate, h handoffToWorkspace) workspace {
 		autoSyncTimer: time.NewTimer(autoSyncInterval),
 		manualSync:    make(chan struct{}),
 	}
+	ws.tree.list.List.Axis = layout.Vertical
+	ws.tree.root = newFileTreeEntry(h.root, h.rootFiles)
+	ws.tree.root.isExpanded = true
 	ws.tabList.Axis = layout.Vertical
 	ws.expl.entryList.Axis = layout.Vertical
 	ws.expl.populate(nil, h.rootFiles)
@@ -215,6 +235,12 @@ func (ws *workspace) handleUpdate(u wsUpdate) {
 		} else if ws.expl.targetID == u.id {
 			ws.expl.populate(u.parents, u.files)
 		}
+	case openDirTreeResult:
+		if u.err != nil {
+			log.Printf("error: %v", u.err)
+		} else {
+			ws.tree.populate(u.id, u.files)
+		}
 	case openFileResult:
 		if u.err != nil {
 			log.Printf("error: %v", u.err)
@@ -294,6 +320,40 @@ func (ws *workspace) handleSyncResult(sr syncResult) {
 }
 
 func (ws *workspace) layout(gtx C, th *material.Theme) D {
+	if ws.mode == wsLayoutModeExpl {
+		return ws.layoutExplMode(gtx, th)
+	}
+	return ws.layoutTreeMode(gtx, th)
+}
+
+func (ws *workspace) layoutTreeMode(gtx C, th *material.Theme) D {
+	// sidebar
+	sbWidth := 300
+	{
+		gtx1 := gtx
+		gtx1.Constraints.Max.X = sbWidth
+		_ = ws.layFileTree(gtx1, th)
+	}
+	// vertical separator
+	{
+		offOp := op.Offset(image.Pt(sbWidth, 0)).Push(gtx.Ops)
+		_ = rule{axis: layout.Vertical, color: th.Fg}.Layout(gtx)
+		offOp.Pop()
+		sbWidth++
+	}
+	// tabs
+	{
+		gtx2 := gtx
+		gtx2.Constraints.Max.X -= sbWidth
+		gtx2.Constraints.Min = gtx2.Constraints.Max
+		offOp := op.Offset(image.Pt(sbWidth, 0)).Push(gtx2.Ops)
+		_ = ws.layTabsNotebook(gtx2, th)
+		offOp.Pop()
+	}
+	return D{Size: gtx.Constraints.Max}
+}
+
+func (ws *workspace) layoutExplMode(gtx C, th *material.Theme) D {
 	if ws.expl.homeBtn.Clicked() {
 		ws.openDir(uuid.Nil)
 	}

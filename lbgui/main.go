@@ -136,7 +136,7 @@ func (lb *legitbook) handleTabsEvent(gtx C, e key.Event) {
 
 func run() error {
 	win := app.NewWindow(
-		app.Size(1050, 680),
+		app.Size(1250, 800),
 		app.Title("Legitbook"),
 	)
 

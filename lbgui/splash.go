@@ -25,6 +25,7 @@ type handoffToOnboard struct {
 type handoffToWorkspace struct {
 	core       lockbook.Core
 	lastSynced string
+	root       lockbook.File
 	rootFiles  []lockbook.File
 	errs       []error
 }
@@ -93,6 +94,7 @@ func (s *splashScreen) doStartupWork() {
 
 	s.updates <- handoffToWorkspace{
 		core:       core,
+		root:       root,
 		rootFiles:  rootFiles,
 		lastSynced: lastSynced,
 		errs:       errs,

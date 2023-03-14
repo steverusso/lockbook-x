@@ -31,6 +31,87 @@ func (t *tab) isDirty() bool {
 	return t.lastSaveAt.Before(t.lastEditAt)
 }
 
+func (ws *workspace) layTabsNotebook(gtx C, th *material.Theme) D {
+	if len(ws.tabs) == 0 {
+		return layout.Center.Layout(gtx, func(gtx C) D {
+			return material.Body1(th, "No opened documents!").Layout(gtx)
+		})
+	}
+	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			if ws.tabList.Axis != layout.Horizontal {
+				ws.tabList.Axis = layout.Horizontal
+			}
+			return ws.layTabList(gtx, th)
+		}),
+		layout.Rigid(rule{color: th.Fg}.Layout),
+		layout.Flexed(1, func(gtx C) D {
+			return ws.layMarkdownTab(gtx, th, &ws.tabs[ws.activeTab])
+		}),
+	)
+}
+
+func (ws *workspace) layTabs(gtx C, th *material.Theme) D {
+	if len(ws.tabs) == 0 {
+		return layout.Center.Layout(gtx, func(gtx C) D {
+			return material.Body1(th, "Use Ctrl-O to open a file!").Layout(gtx)
+		})
+	}
+	return layout.Flex{}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			if ws.tabList.Axis != layout.Vertical {
+				ws.tabList.Axis = layout.Vertical
+			}
+			gtx.Constraints.Min.X = 220
+			gtx.Constraints.Max.X = 220
+			return ws.layTabList(gtx, th)
+		}),
+		layout.Rigid(func(gtx C) D {
+			size := image.Point{1, gtx.Constraints.Max.Y}
+			rect := clip.Rect{Max: size}.Op()
+			paint.FillShape(gtx.Ops, th.Fg, rect)
+			return D{Size: size}
+		}),
+		layout.Flexed(1, func(gtx C) D {
+			return ws.layMarkdownTab(gtx, th, &ws.tabs[ws.activeTab])
+		}),
+	)
+}
+
+func (ws *workspace) layTabList(gtx C, th *material.Theme) D {
+	return material.List(th, &ws.tabList).Layout(gtx, len(ws.tabs), func(gtx C, i int) D {
+		t := &ws.tabs[i]
+		if t.btn.Clicked() {
+			ws.selectTab(i)
+			op.InvalidateOp{}.Add(gtx.Ops)
+		}
+		txt := t.name
+		if t.isDirty() {
+			txt += "*"
+		}
+		// If this is the active tab, emphasize the text and invert the bg & fg.
+		lbl := material.Body1(th, txt)
+		// lbl.Font.Variant = "Mono"
+		bg := th.Bg
+		if i == ws.activeTab {
+			lbl.Font.Weight = text.Bold
+			lbl.Color = bg
+			bg = th.ContrastBg
+		}
+		// Record the layout in order to get the size for filling the background.
+		m := op.Record(gtx.Ops)
+		dims := t.btn.Layout(gtx, func(gtx C) D {
+			return layout.UniformInset(5).Layout(gtx, lbl.Layout)
+		})
+		call := m.Stop()
+		// Fill the background and draw the tab button.
+		rect := clip.Rect{Max: dims.Size}
+		paint.FillShape(gtx.Ops, bg, rect.Op())
+		call.Add(gtx.Ops)
+		return dims
+	})
+}
+
 func (ws *workspace) layMarkdownTab(gtx C, th *material.Theme, t *tab) D {
 	defer func() {
 		if t.view.Editor.HasChanged() {
@@ -64,64 +145,6 @@ func (ws *workspace) layMarkdownTab(gtx C, th *material.Theme, t *tab) D {
 		},
 		View: &t.view,
 	}.Layout(gtx)
-}
-
-func (ws *workspace) layTabs(gtx C, th *material.Theme) D {
-	if len(ws.tabs) == 0 {
-		return layout.Center.Layout(gtx, func(gtx C) D {
-			return material.Body1(th, "Use Ctrl-O to open a file!").Layout(gtx)
-		})
-	}
-	return layout.Flex{}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
-			return ws.layTabList(gtx, th)
-		}),
-		layout.Rigid(func(gtx C) D {
-			size := image.Point{1, gtx.Constraints.Max.Y}
-			rect := clip.Rect{Max: size}.Op()
-			paint.FillShape(gtx.Ops, th.Fg, rect)
-			return D{Size: size}
-		}),
-		layout.Flexed(1, func(gtx C) D {
-			return ws.layMarkdownTab(gtx, th, &ws.tabs[ws.activeTab])
-		}),
-	)
-}
-
-func (ws *workspace) layTabList(gtx C, th *material.Theme) D {
-	gtx.Constraints.Min.X = 220
-	gtx.Constraints.Max.X = 220
-	return material.List(th, &ws.tabList).Layout(gtx, len(ws.tabs), func(gtx C, i int) D {
-		t := &ws.tabs[i]
-		if t.btn.Clicked() {
-			ws.selectTab(i)
-			op.InvalidateOp{}.Add(gtx.Ops)
-		}
-		txt := t.name
-		if t.isDirty() {
-			txt += "*"
-		}
-		// If this is the active tab, emphasize the text and invert the bg & fg.
-		lbl := material.Body1(th, txt)
-		// lbl.Font.Variant = "Mono"
-		bg := th.Bg
-		if i == ws.activeTab {
-			lbl.Font.Weight = text.Bold
-			lbl.Color = bg
-			bg = th.ContrastBg
-		}
-		// Record the layout in order to get the size for filling the background.
-		m := op.Record(gtx.Ops)
-		dims := t.btn.Layout(gtx, func(gtx C) D {
-			return layout.UniformInset(5).Layout(gtx, lbl.Layout)
-		})
-		call := m.Stop()
-		// Fill the background and draw the tab button.
-		rect := clip.Rect{Max: dims.Size}
-		paint.FillShape(gtx.Ops, bg, rect.Op())
-		call.Add(gtx.Ops)
-		return dims
-	})
 }
 
 func (ws *workspace) insertTab(id lockbook.FileID, name string) {
