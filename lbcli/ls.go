@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"sort"
+	"strings"
 
 	"github.com/steverusso/lockbook-x/go-lockbook"
 )
@@ -34,7 +35,7 @@ type lsCmd struct {
 	//
 	// clap:opt ids
 	fullIDs bool
-	// Target directory (defaults to root).
+	// Path or ID of the target directory (defaults to root).
 	target string
 }
 
@@ -59,39 +60,43 @@ type fileNode struct {
 	children   []fileNode
 }
 
-func (node *fileNode) text(cfg *lsConfig) (s string) {
+func (fn *fileNode) text(cfg *lsConfig) string {
+	var s strings.Builder
 	if !cfg.short {
-		s += fmt.Sprintf("%-*s  ", cfg.idWidth, node.id.String()[:cfg.idWidth])
+		fmt.Fprintf(&s, "%-*s  ", cfg.idWidth, fn.id.String()[:cfg.idWidth])
 	}
-	nameOrPath := node.name
+	nameOrPath := fn.name
 	if cfg.paths {
-		nameOrPath = fmt.Sprintf("%s%s", node.dirName, node.name)
+		nameOrPath = fn.dirName + fn.name
 	}
-	s += fmt.Sprintf("%-*s", cfg.nameWidth, nameOrPath)
+	fmt.Fprintf(&s, "%-*s", cfg.nameWidth, nameOrPath)
 	if !cfg.short {
-		if node.sharedBy != "" {
-			s += "   @" + node.sharedBy + " "
+		if fn.sharedBy != "" {
+			fmt.Fprintf(&s, "   @%s ", fn.sharedBy)
 		} else {
-			s += "   "
+			s.WriteString("   ")
 		}
-		if node.sharedWith != "" {
-			s += "-> " + node.sharedWith
+		if fn.sharedWith != "" {
+			s.WriteString("-> ")
+			s.WriteString(fn.sharedWith)
 		}
 	}
-	return
+	return s.String()
 }
 
-func (node *fileNode) printOut(cfg *lsConfig) {
-	if (!cfg.onlyDirs && !cfg.onlyDocs) || (cfg.onlyDirs && node.isDir) || (cfg.onlyDocs && !node.isDir) {
-		fmt.Println(node.text(cfg))
+func (fn *fileNode) printOut(cfg *lsConfig) {
+	// Print if there are no type filters or if this file is the desired file type.
+	if (!cfg.onlyDirs && !cfg.onlyDocs) ||
+		(cfg.onlyDirs && fn.isDir) ||
+		(cfg.onlyDocs && !fn.isDir) {
+		fmt.Println(fn.text(cfg))
 	}
-	for i := range node.children {
-		node.children[i].printOut(cfg)
+	for i := range fn.children {
+		fn.children[i].printOut(cfg)
 	}
 }
 
 func getChildren(core lockbook.Core, files []lockbook.File, parent lockbook.FileID, cfg *lsConfig) ([]fileNode, error) {
-	lockbook.SortFiles(files)
 	children := []fileNode{}
 	for i := range files {
 		f := &files[i]
@@ -139,7 +144,7 @@ func getChildren(core lockbook.Core, files []lockbook.File, parent lockbook.File
 		// Determine column widths.
 		n := len(name)
 		if cfg.paths {
-			n = len(fmt.Sprintf("%s%s", dirName, name))
+			n += len(dirName)
 		}
 		if n > cfg.nameWidth {
 			cfg.nameWidth = n
@@ -166,13 +171,16 @@ func (ls *lsCmd) run(core lockbook.Core) error {
 	if ls.target == "" {
 		ls.target = "/"
 	}
-	f, err := core.FileByPath(ls.target)
+	id, err := idFromSomething(core, ls.target)
 	if err != nil {
-		return fmt.Errorf("getting file by path %q: %w", ls.target, err)
+		return fmt.Errorf("trying to get target from %q: %w", ls.target, err)
+	}
+	f, err := core.FileByID(id)
+	if err != nil {
+		return fmt.Errorf("getting file by id %q: %w", id, err)
 	}
 	var files []lockbook.File
 	{
-		var err error
 		if ls.recursive {
 			files, err = core.GetAndGetChildrenRecursively(f.ID)
 			if err != nil {
@@ -185,10 +193,13 @@ func (ls *lsCmd) run(core lockbook.Core) error {
 			}
 		}
 	}
-	for i := range files {
-		if files[i].IsRoot() {
-			files = append(files[:i], files[i+1:]...)
-			break
+	lockbook.SortFiles(files)
+	if f.IsRoot() {
+		for i := range files {
+			if files[i].IsRoot() {
+				files = append(files[:i], files[i+1:]...)
+				break
+			}
 		}
 	}
 	acct, err := core.GetAccount()
