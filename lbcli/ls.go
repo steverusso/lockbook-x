@@ -109,13 +109,16 @@ func getChildren(core lockbook.Core, files []lockbook.File, parent lockbook.File
 			name += "/"
 		}
 		// Parent directory.
-		fpath, err := core.PathByID(f.ID)
-		if err != nil {
-			return nil, fmt.Errorf("getting path for %q: %w", f.ID, err)
-		}
-		dirName := path.Dir(path.Clean(fpath))
-		if dirName != "/" {
-			dirName += "/"
+		dirName := ""
+		if cfg.paths {
+			fpath, err := core.PathByID(f.ID)
+			if err != nil {
+				return nil, fmt.Errorf("getting path for %q: %w", f.ID, err)
+			}
+			dirName = path.Dir(path.Clean(fpath))
+			if dirName != "/" {
+				dirName += "/"
+			}
 		}
 		// Share info.
 		sharedWiths := []string{}
