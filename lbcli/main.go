@@ -61,13 +61,15 @@ func (c *syncCmd) run(core lockbook.Core) error {
 			cwu := sp.CurrentWorkUnit
 			switch {
 			case cwu.PullMetadata:
-				fmt.Println("pulling metadata updates...")
+				fmt.Println("-> file tree updates...")
 			case cwu.PushMetadata:
-				fmt.Println("pushing metadata updates...")
-			case cwu.PullDocument != "":
-				fmt.Printf("pulling %s...\n", cwu.PullDocument)
-			case cwu.PushDocument != "":
-				fmt.Printf("pushing %s...\n", cwu.PushDocument)
+				fmt.Println("<- file tree updates...")
+			case cwu.PullDocument != nil:
+				idPrefix := cwu.PullDocument.ID.String()[:idPrefixLen]
+				fmt.Printf("-> %s (%s)...\n", cwu.PullDocument.Name, idPrefix)
+			case cwu.PushDocument != nil:
+				idPrefix := cwu.PushDocument.ID.String()[:idPrefixLen]
+				fmt.Printf("<- %s (%s)...\n", cwu.PushDocument.Name, idPrefix)
 			}
 		}
 	}

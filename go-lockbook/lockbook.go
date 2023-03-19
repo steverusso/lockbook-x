@@ -230,17 +230,20 @@ const (
 	WorkUnitTypeServer
 )
 
+// SyncProgress is the data sent (via closure) at certain stages of sync.
 type SyncProgress struct {
 	Total           uint64
 	Progress        uint64
 	CurrentWorkUnit ClientWorkUnit
 }
 
+// ClientWorkUnit is which type of work sync is performing. The type of work unit is
+// determined by which field is non-zero.
 type ClientWorkUnit struct {
 	PullMetadata bool
 	PushMetadata bool
-	PullDocument string
-	PushDocument string
+	PullDocument *File
+	PushDocument *File
 }
 
 type UsageMetrics struct {
@@ -259,7 +262,7 @@ type FileUsage struct {
 	SizeBytes uint64
 }
 
-// ImportFileInfo is the data sent (via closure) at certain stages of file input. The
+// ImportFileInfo is the data sent (via closure) at certain stages of file import. The
 // stage and type of information is determined by the zero value of each field. A non-zero
 // `Total` means a "total calculated" update. A non-empty `DiskPath` means a "file
 // started" update. A non-nil `FileDone` means a "file finished" update.

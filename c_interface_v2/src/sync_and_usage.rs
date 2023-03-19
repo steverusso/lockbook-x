@@ -102,15 +102,19 @@ pub struct LbSyncProgress {
 pub struct LbClientWorkUnit {
     pull_meta: bool,
     push_meta: bool,
-    pull_doc: *mut c_char,
-    push_doc: *mut c_char,
+    pull_doc: *mut LbFile,
+    push_doc: *mut LbFile,
 }
 
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn lb_sync_progress_free(sp: LbSyncProgress) {
-    libc::free(sp.current_wu.pull_doc as *mut c_void);
-    libc::free(sp.current_wu.push_doc as *mut c_void);
+    if !sp.current_wu.pull_doc.is_null() {
+        lb_file_free_ptr(sp.current_wu.pull_doc);
+    }
+    if !sp.current_wu.push_doc.is_null() {
+        lb_file_free_ptr(sp.current_wu.push_doc);
+    }
 }
 
 pub type LbSyncProgressCallback = unsafe extern "C" fn(LbSyncProgress, *mut c_void);
@@ -135,8 +139,8 @@ pub unsafe extern "C" fn lb_sync_all(
         match sp.current_work_unit {
             ClientWorkUnit::PullMetadata => cwu.pull_meta = true,
             ClientWorkUnit::PushMetadata => cwu.push_meta = true,
-            ClientWorkUnit::PullDocument(v) => cwu.pull_doc = cstr(v),
-            ClientWorkUnit::PushDocument(v) => cwu.push_doc = cstr(v),
+            ClientWorkUnit::PullDocument(f) => cwu.pull_doc = &mut lb_file_new(f),
+            ClientWorkUnit::PushDocument(f) => cwu.push_doc = &mut lb_file_new(f),
         };
         let c_sp = LbSyncProgress {
             total: sp.total as u64,

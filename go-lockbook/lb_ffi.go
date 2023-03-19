@@ -330,15 +330,22 @@ func (l *lbCoreFFI) SyncAll(fn func(SyncProgress)) error {
 		if fn == nil {
 			return
 		}
+		cwu := ClientWorkUnit{
+			PullMetadata: bool(cSP.current_wu.pull_meta),
+			PushMetadata: bool(cSP.current_wu.push_meta),
+		}
+		if cSP.current_wu.pull_doc != nil {
+			f := newFileFromC(cSP.current_wu.pull_doc)
+			cwu.PullDocument = &f
+		}
+		if cSP.current_wu.push_doc != nil {
+			f := newFileFromC(cSP.current_wu.push_doc)
+			cwu.PushDocument = &f
+		}
 		fn(SyncProgress{
-			Total:    uint64(cSP.total),
-			Progress: uint64(cSP.progress),
-			CurrentWorkUnit: ClientWorkUnit{
-				PullMetadata: bool(cSP.current_wu.pull_meta),
-				PushMetadata: bool(cSP.current_wu.push_meta),
-				PullDocument: C.GoString(cSP.current_wu.pull_doc),
-				PushDocument: C.GoString(cSP.current_wu.push_doc),
-			},
+			Total:           uint64(cSP.total),
+			Progress:        uint64(cSP.progress),
+			CurrentWorkUnit: cwu,
 		})
 	})
 	defer handle.Delete()
