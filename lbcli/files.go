@@ -17,12 +17,33 @@ type catCmd struct {
 	target string
 }
 
+func (c *catCmd) run(core lockbook.Core) error {
+	id, err := idFromSomething(core, c.target)
+	if err != nil {
+		return fmt.Errorf("trying to get id from %q: %w", c.target, err)
+	}
+	data, err := core.ReadDocument(id)
+	if err != nil {
+		return fmt.Errorf("reading doc %q: %w", c.target, err)
+	}
+	fmt.Printf("%s", data)
+	return nil
+}
+
 // Create a directory or do nothing if it exists.
 type mkdirCmd struct {
 	// The path at which to create the directory.
 	//
 	// clap:arg_required
 	path string
+}
+
+func (c *mkdirCmd) run(core lockbook.Core) error {
+	v := c.path
+	if v != "/" && v[len(v)-1] != '/' {
+		v += "/"
+	}
+	return mk(core, v)
 }
 
 // Create a document or do nothing if it exists.
@@ -33,16 +54,20 @@ type mkdocCmd struct {
 	path string
 }
 
-// Move a file to another parent.
-type mvCmd struct {
-	// The file to move.
-	//
-	// clap:arg_required
-	src string
-	// The destination directory.
-	//
-	// clap:arg_required
-	dest string
+func (c *mkdocCmd) run(core lockbook.Core) error {
+	v := c.path
+	if v != "/" && v[len(v)-1] == '/' {
+		v = v[:len(v)-1]
+	}
+	return mk(core, v)
+}
+
+func mk(core lockbook.Core, fpath string) error {
+	_, err := core.CreateFileAtPath(fpath)
+	if err != nil {
+		return fmt.Errorf("creating file at path %q: %w", fpath, err)
+	}
+	return nil
 }
 
 // Rename a file.
@@ -61,69 +86,6 @@ type renameCmd struct {
 	//
 	// clap:arg_required
 	newName string
-}
-
-// Delete a file.
-type rmCmd struct {
-	// Don't prompt for confirmation.
-	//
-	// clap:opt force,f
-	force bool
-	// Lockbook path or ID to delete.
-	//
-	// clap:arg_required
-	target string
-}
-
-// Write data from stdin to a lockbook document.
-//
-// clap:cmd_usage [--trunc] <target>
-type writeCmd struct {
-	// Truncate the file instead of appending to it.
-	//
-	// clap:opt trunc
-	trunc bool
-	// Lockbook path or ID to write.
-	//
-	// clap:arg_required
-	target string
-}
-
-func (c *catCmd) run(core lockbook.Core) error {
-	id, err := idFromSomething(core, c.target)
-	if err != nil {
-		return fmt.Errorf("trying to get id from %q: %w", c.target, err)
-	}
-	data, err := core.ReadDocument(id)
-	if err != nil {
-		return fmt.Errorf("reading doc %q: %w", c.target, err)
-	}
-	fmt.Printf("%s", data)
-	return nil
-}
-
-func (c *mkdirCmd) run(core lockbook.Core) error {
-	v := c.path
-	if v != "/" && v[len(v)-1] != '/' {
-		v += "/"
-	}
-	return mk(core, v)
-}
-
-func (c *mkdocCmd) run(core lockbook.Core) error {
-	v := c.path
-	if v != "/" && v[len(v)-1] == '/' {
-		v = v[:len(v)-1]
-	}
-	return mk(core, v)
-}
-
-func mk(core lockbook.Core, fpath string) error {
-	_, err := core.CreateFileAtPath(fpath)
-	if err != nil {
-		return fmt.Errorf("creating file at path %q: %w", fpath, err)
-	}
-	return nil
 }
 
 func (c *renameCmd) run(core lockbook.Core) error {
@@ -169,6 +131,18 @@ func (c *renameCmd) run(core lockbook.Core) error {
 	}
 }
 
+// Move a file to another parent.
+type mvCmd struct {
+	// The file to move.
+	//
+	// clap:arg_required
+	src string
+	// The destination directory.
+	//
+	// clap:arg_required
+	dest string
+}
+
 func (c *mvCmd) run(core lockbook.Core) error {
 	srcID, err := idFromSomething(core, c.src)
 	if err != nil {
@@ -183,6 +157,18 @@ func (c *mvCmd) run(core lockbook.Core) error {
 		return fmt.Errorf("moving %s -> %s: %w", srcID, destID, err)
 	}
 	return nil
+}
+
+// Delete a file.
+type rmCmd struct {
+	// Don't prompt for confirmation.
+	//
+	// clap:opt force,f
+	force bool
+	// Lockbook path or ID to delete.
+	//
+	// clap:arg_required
+	target string
 }
 
 func (c *rmCmd) run(core lockbook.Core) error {
@@ -226,6 +212,20 @@ func (c *rmCmd) run(core lockbook.Core) error {
 		}
 	}
 	return nil
+}
+
+// Write data from stdin to a lockbook document.
+//
+// clap:cmd_usage [--trunc] <target>
+type writeCmd struct {
+	// Truncate the file instead of appending to it.
+	//
+	// clap:opt trunc
+	trunc bool
+	// Lockbook path or ID to write.
+	//
+	// clap:arg_required
+	target string
 }
 
 func (c *writeCmd) run(core lockbook.Core) error {

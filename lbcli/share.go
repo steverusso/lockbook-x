@@ -50,36 +50,6 @@ type shareCreateCmd struct {
 	username string
 }
 
-// List pending shares.
-type sharePendingCmd struct {
-	// Print full UUIDs instead of prefixes.
-	//
-	// clap:opt ids
-	fullIDs bool
-}
-
-// Accept a pending share.
-type shareAcceptCmd struct {
-	// The ID or ID prefix of a pending share.
-	//
-	// clap:arg_required
-	target string
-	// Where to place this in your file tree.
-	//
-	// clap:arg_required
-	dest string
-	// Name this file something else.
-	newName string
-}
-
-// Reject a pending share.
-type shareRejectCmd struct {
-	// The ID or ID prefix of a pending share.
-	//
-	// clap:arg_required
-	target string
-}
-
 func (c *shareCreateCmd) run(core lockbook.Core) error {
 	id, err := idFromSomething(core, c.target)
 	if err != nil {
@@ -96,6 +66,14 @@ func (c *shareCreateCmd) run(core lockbook.Core) error {
 	return nil
 }
 
+// List pending shares.
+type sharePendingCmd struct {
+	// Print full UUIDs instead of prefixes.
+	//
+	// clap:opt ids
+	fullIDs bool
+}
+
 func (c *sharePendingCmd) run(core lockbook.Core) error {
 	pendingShares, err := core.GetPendingShares()
 	if err != nil {
@@ -108,6 +86,20 @@ func (c *sharePendingCmd) run(core lockbook.Core) error {
 	shareInfos := filesToShareInfos(pendingShares)
 	fmt.Println(shareInfoTable(shareInfos, c.fullIDs))
 	return nil
+}
+
+// Accept a pending share.
+type shareAcceptCmd struct {
+	// The ID or ID prefix of a pending share.
+	//
+	// clap:arg_required
+	target string
+	// Where to place this in your file tree.
+	//
+	// clap:arg_required
+	dest string
+	// Name this file something else.
+	newName string
 }
 
 func (c *shareAcceptCmd) run(core lockbook.Core) error {
@@ -174,6 +166,14 @@ func (c *shareAcceptCmd) run(core lockbook.Core) error {
 		return fmt.Errorf("creating link: %w", err)
 	}
 	return nil
+}
+
+// Reject a pending share.
+type shareRejectCmd struct {
+	// The ID or ID prefix of a pending share.
+	//
+	// clap:arg_required
+	target string
 }
 
 func (c *shareRejectCmd) run(core lockbook.Core) error {

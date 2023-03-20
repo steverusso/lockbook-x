@@ -41,30 +41,6 @@ func (a *acctCmd) run(core lockbook.Core) error {
 	}
 }
 
-// Restore an existing account from its secret account string.
-//
-// The restore command reads the secret account string from standard input (stdin).
-// In other words, pipe your account string to this command like:
-// 'cat lbkey.txt | lbcli restore'.
-type acctRestoreCmd struct {
-	// Don't perform the initial sync.
-	//
-	// clap:opt no-sync
-	noSync bool
-}
-
-// Print out the private key for this lockbook.
-type acctPrivKeyCmd struct{}
-
-// Overview of your account.
-type acctStatusCmd struct{}
-
-// Create a new subscription with a credit card.
-type acctSubscribeCmd struct{}
-
-// Cancel an existing subscription.
-type acctUnsubscribeCmd struct{}
-
 // Create a lockbook account.
 type acctInitCmd struct {
 	// Include the welcome document.
@@ -111,6 +87,18 @@ func (c *acctInitCmd) run(core lockbook.Core) error {
 	return nil
 }
 
+// Restore an existing account from its secret account string.
+//
+// The restore command reads the secret account string from standard input (stdin).
+// In other words, pipe your account string to this command like:
+// 'cat lbkey.txt | lbcli restore'.
+type acctRestoreCmd struct {
+	// Don't perform the initial sync.
+	//
+	// clap:opt no-sync
+	noSync bool
+}
+
 func (c *acctRestoreCmd) run(core lockbook.Core) error {
 	fi, err := os.Stdin.Stat()
 	if err != nil {
@@ -140,6 +128,9 @@ func (c *acctRestoreCmd) run(core lockbook.Core) error {
 	return nil
 }
 
+// Print out the private key for this lockbook.
+type acctPrivKeyCmd struct{}
+
 func (acctPrivKeyCmd) run(core lockbook.Core) error {
 	acctStr, err := core.ExportAccount()
 	if err != nil {
@@ -155,6 +146,9 @@ func (acctPrivKeyCmd) run(core lockbook.Core) error {
 	fmt.Println(acctStr)
 	return nil
 }
+
+// Overview of your account.
+type acctStatusCmd struct{}
 
 func (acctStatusCmd) run(core lockbook.Core) error {
 	u, err := core.GetUsage()
@@ -184,6 +178,9 @@ func (acctStatusCmd) run(core lockbook.Core) error {
 	fmt.Printf("data cap: %s, %d%% utilized\n", u.DataCap.Readable, pct)
 	return nil
 }
+
+// Create a new subscription with a credit card.
+type acctSubscribeCmd struct{}
 
 func (acctSubscribeCmd) run(core lockbook.Core) error {
 	fmt.Print("checking for existing card... ")
@@ -232,6 +229,9 @@ func (acctSubscribeCmd) run(core lockbook.Core) error {
 	fmt.Println("subscribed!")
 	return nil
 }
+
+// Cancel an existing subscription.
+type acctUnsubscribeCmd struct{}
 
 func (acctUnsubscribeCmd) run(core lockbook.Core) error {
 	fmt.Print("cancelling subscription... ")
