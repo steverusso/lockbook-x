@@ -149,11 +149,18 @@ func (c *acctRestoreCmd) parse(args []string) {
 func (*acctPrivKeyCmd) printUsage(to *os.File) {
 	fmt.Fprintf(to, `%[1]s acct privkey - print out the private key for this lockbook
 
+overview:
+   Your private key should always be kept secret and should only be displayed when you are
+   in a secure location. For that reason, this command will prompt you before printing
+   your private key just to double check. However, this prompt can be satisfied by passing
+   the '--no-prompt' option.
+
 usage:
    privkey [options]
 
 options:
-   -h, --help   show this help message
+       --no-prompt   don't require confirmation before displaying the private key
+   -h, --help        show this help message
 `, os.Args[0])
 }
 
@@ -167,9 +174,11 @@ func (c *acctPrivKeyCmd) parse(args []string) {
 			i++
 			break
 		}
-		k, _, _ := optParts(args[i][1:])
+		k, eqv, _ := optParts(args[i][1:])
 
 		switch k {
+		case "no-prompt":
+			c.noPrompt = clapParseBool(eqv)
 		case "help", "h":
 			exitUsgGood(c)
 		default:
@@ -732,7 +741,7 @@ options:
    -h, --help        show this help message
 
 arguments:
-   [target]   target directory (defaults to root)
+   [target]   path or ID of the target directory (defaults to root)
 `, os.Args[0])
 }
 

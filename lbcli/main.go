@@ -180,6 +180,14 @@ func idFromSomething(core lockbook.Core, v string) (uuid.UUID, error) {
 	return uuid.Nil, errors.New(errMsg)
 }
 
+func isStdinPipe() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		panic(err)
+	}
+	return fi.Mode()&os.ModeNamedPipe != 0
+}
+
 func run() error {
 	// Figure out data directory.
 	dataDir := os.Getenv("LOCKBOOK_PATH")

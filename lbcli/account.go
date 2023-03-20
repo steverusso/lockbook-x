@@ -129,19 +129,35 @@ func (c *acctRestoreCmd) run(core lockbook.Core) error {
 }
 
 // Print out the private key for this lockbook.
-type acctPrivKeyCmd struct{}
+//
+// Your private key should always be kept secret and should only be displayed when you are
+// in a secure location. For that reason, this command will prompt you before printing
+// your private key just to double check. However, this prompt can be satisfied by passing
+// the '--no-prompt' option.
+type acctPrivKeyCmd struct {
+	// Don't require confirmation before displaying the private key.
+	//
+	// clap:opt no-prompt
+	noPrompt bool
+}
 
-func (acctPrivKeyCmd) run(core lockbook.Core) error {
+func (c acctPrivKeyCmd) run(core lockbook.Core) error {
 	acctStr, err := core.ExportAccount()
 	if err != nil {
 		return fmt.Errorf("exporting account: %w", err)
 	}
-	answer := ""
-	fmt.Print("your private key is about to be visible. do you want to proceed? [y/N]: ")
-	fmt.Scanln(&answer)
-	if answer != "y" && answer != "Y" {
-		fmt.Println("aborted")
-		return nil
+	if !c.noPrompt {
+		if isStdinPipe() {
+			fmt.Fprintln(os.Stderr, "warning: use the `--no-prompt` option when piping your private key to stdout")
+			return nil
+		}
+		var answer string
+		fmt.Print("your private key is about to be visible. do you want to proceed? [y/N]: ")
+		fmt.Scanln(&answer)
+		if answer != "y" && answer != "Y" {
+			fmt.Println("aborted")
+			return nil
+		}
 	}
 	fmt.Println(acctStr)
 	return nil
