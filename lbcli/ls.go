@@ -51,13 +51,12 @@ type lsConfig struct {
 }
 
 type fileNode struct {
-	id         lockbook.FileID
-	dirName    string
-	name       string
-	isDir      bool
-	sharedWith string
-	sharedBy   string
-	children   []fileNode
+	id       lockbook.FileID
+	dirName  string
+	name     string
+	isDir    bool
+	shared   lsShareInfo
+	children []fileNode
 }
 
 func (fn *fileNode) text(cfg *lsConfig) string {
@@ -71,14 +70,14 @@ func (fn *fileNode) text(cfg *lsConfig) string {
 	}
 	fmt.Fprintf(&s, "%-*s", cfg.nameWidth, nameOrPath)
 	if !cfg.short {
-		if fn.sharedBy != "" {
-			fmt.Fprintf(&s, "   @%s ", fn.sharedBy)
+		if fn.shared.by != "" {
+			fmt.Fprintf(&s, "   @%s ", fn.shared.by)
 		} else {
 			s.WriteString("   ")
 		}
-		if fn.sharedWith != "" {
+		if fn.shared.with != "" {
 			s.WriteString("-> ")
-			s.WriteString(fn.sharedWith)
+			s.WriteString(fn.shared.with)
 		}
 	}
 	return s.String()
@@ -120,45 +119,20 @@ func getChildren(core lockbook.Core, files []lockbook.File, parent lockbook.File
 				dirName += "/"
 			}
 		}
-		// Share info.
-		sharedWiths := []string{}
-		sharedBy := ""
-		for _, sh := range f.Shares {
-			if sh.SharedWith == cfg.myName {
-				sharedBy = sh.SharedBy
-			}
-			if sh.SharedWith == cfg.myName {
-				sharedWiths = append(sharedWiths, "me")
-			} else {
-				sharedWiths = append(sharedWiths, "@"+sh.SharedWith)
-			}
-		}
-		sort.SliceStable(sharedWiths, func(i, j int) bool {
-			return len(sharedWiths[i]) < len(sharedWiths[j])
-		})
-		sharedWith := ""
-		if n := len(sharedWiths); n == 1 {
-			sharedWith = sharedWiths[0]
-		} else if n == 2 {
-			sharedWith = sharedWiths[0] + " and " + sharedWiths[1]
-		} else if n != 0 {
-			sharedWith = fmt.Sprintf("%s, %s, and %d more", sharedWiths[0], sharedWiths[1], n-2)
-		}
 		// Determine column widths.
-		n := len(name)
+		nameLen := len(name)
 		if cfg.paths {
-			n += len(dirName)
+			nameLen += len(dirName)
 		}
-		if n > cfg.nameWidth {
-			cfg.nameWidth = n
+		if nameLen > cfg.nameWidth {
+			cfg.nameWidth = nameLen
 		}
 		child := fileNode{
-			id:         f.ID,
-			dirName:    dirName,
-			name:       name,
-			isDir:      f.IsDir(),
-			sharedWith: sharedWith,
-			sharedBy:   sharedBy,
+			id:      f.ID,
+			dirName: dirName,
+			name:    name,
+			isDir:   f.IsDir(),
+			shared:  getShareInfo(f.Shares, cfg.myName),
 		}
 		childsChildren, err := getChildren(core, files, f.ID, cfg)
 		if err != nil {
@@ -168,6 +142,36 @@ func getChildren(core lockbook.Core, files []lockbook.File, parent lockbook.File
 		children = append(children, child)
 	}
 	return children, nil
+}
+
+type lsShareInfo struct {
+	by   string
+	with string
+}
+
+func getShareInfo(shares []lockbook.Share, myName string) lsShareInfo {
+	by := ""
+	withs := make([]string, 0, len(shares))
+	for _, sh := range shares {
+		if sh.SharedWith == myName {
+			by = sh.SharedBy
+			withs = append(withs, "me")
+		} else {
+			withs = append(withs, "@"+sh.SharedWith)
+		}
+	}
+	sort.SliceStable(withs, func(i, j int) bool {
+		return len(withs[i]) < len(withs[j])
+	})
+	with := ""
+	if n := len(withs); n == 1 {
+		with = withs[0]
+	} else if n == 2 {
+		with = withs[0] + " and " + withs[1]
+	} else if n != 0 {
+		with = fmt.Sprintf("%s, %s, and %d more", withs[0], withs[1], n-2)
+	}
+	return lsShareInfo{by: by, with: with}
 }
 
 func (ls *lsCmd) run(core lockbook.Core) error {
@@ -182,21 +186,21 @@ func (ls *lsCmd) run(core lockbook.Core) error {
 	if err != nil {
 		return fmt.Errorf("getting file by id %q: %w", id, err)
 	}
+
 	var files []lockbook.File
-	{
-		if ls.recursive {
-			files, err = core.GetAndGetChildrenRecursively(f.ID)
-			if err != nil {
-				return fmt.Errorf("getting children recursively for %q: %w", f.ID, err)
-			}
-		} else {
-			files, err = core.GetChildren(f.ID)
-			if err != nil {
-				return fmt.Errorf("getting children for %q: %w", f.ID, err)
-			}
+	if ls.recursive {
+		files, err = core.GetAndGetChildrenRecursively(f.ID)
+		if err != nil {
+			return fmt.Errorf("getting children recursively for %q: %w", f.ID, err)
+		}
+	} else {
+		files, err = core.GetChildren(f.ID)
+		if err != nil {
+			return fmt.Errorf("getting children for %q: %w", f.ID, err)
 		}
 	}
 	lockbook.SortFiles(files)
+
 	if f.IsRoot() {
 		for i := range files {
 			if files[i].IsRoot() {
@@ -205,6 +209,7 @@ func (ls *lsCmd) run(core lockbook.Core) error {
 			}
 		}
 	}
+
 	acct, err := core.GetAccount()
 	if err != nil {
 		return fmt.Errorf("getting account: %v", err)
