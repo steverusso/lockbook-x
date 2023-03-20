@@ -229,11 +229,7 @@ type writeCmd struct {
 }
 
 func (c *writeCmd) run(core lockbook.Core) error {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		panic(err)
-	}
-	if fi.Mode()&os.ModeNamedPipe == 0 {
+	if !isStdinPipe() {
 		return errors.New("to write data to a lockbook document, pipe it into this command, e.g.:\necho 'hi' | lockbook write my-doc.txt")
 	}
 	id, err := idFromSomething(core, c.target)

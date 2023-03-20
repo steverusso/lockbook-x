@@ -54,11 +54,7 @@ type acctInitCmd struct {
 }
 
 func (c *acctInitCmd) run(core lockbook.Core) error {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		panic(err)
-	}
-	if fi.Mode()&os.ModeNamedPipe != 0 {
+	if isStdinPipe() {
 		return errors.New("cannot create a new account without ability to prompt for terminal input")
 	}
 	scnr := bufio.NewScanner(os.Stdin)
@@ -72,7 +68,7 @@ func (c *acctInitCmd) run(core lockbook.Core) error {
 		apiURL = lockbook.DefaultAPILocation
 	}
 	fmt.Println("generating keys and checking for username availability...")
-	_, err = core.CreateAccount(uname, c.welcome)
+	_, err := core.CreateAccount(uname, c.welcome)
 	if err != nil {
 		return fmt.Errorf("creating account: %w", err)
 	}
@@ -100,11 +96,7 @@ type acctRestoreCmd struct {
 }
 
 func (c *acctRestoreCmd) run(core lockbook.Core) error {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		panic(err)
-	}
-	if fi.Mode()&os.ModeNamedPipe == 0 {
+	if !isStdinPipe() {
 		return errors.New("to restore an existing lockbook account, pipe your account string into this command, e.g.:\npbpaste | lockbook init --restore")
 	}
 	data, err := io.ReadAll(os.Stdin)
