@@ -146,7 +146,7 @@ func idFromSomething(core lockbook.Core, v string) (uuid.UUID, error) {
 	if err == nil {
 		return f.ID, nil
 	}
-	if err, ok := err.(*lockbook.Error); ok && err.Code != lockbook.CodeFileNonexistent {
+	if err, ok := asLbErr(err); ok && err.Code != lockbook.CodeFileNonexistent {
 		return uuid.Nil, fmt.Errorf("trying to get a file by path: %w", err)
 	}
 	// Not a full UUID and not a path, so that leaves UUID prefix.
@@ -177,6 +177,14 @@ func idFromSomething(core lockbook.Core, v string) (uuid.UUID, error) {
 		errMsg += fmt.Sprintf("  %s  %s\n", f.ID, pathOrErr)
 	}
 	return uuid.Nil, errors.New(errMsg)
+}
+
+func asLbErr(err error) (*lockbook.Error, bool) {
+	var lberr *lockbook.Error
+	if errors.As(err, &lberr) {
+		return lberr, true
+	}
+	return nil, false
 }
 
 func isStdinPipe() bool {
@@ -258,10 +266,9 @@ func run() error {
 func main() {
 	if err := run(); err != nil {
 		fmt.Printf("\033[1;31merror:\033[0m %v\n", err)
-		var lberr *lockbook.Error
-		if errors.As(err, &lberr) && lberr != nil && lberr.Trace != "" {
-			fmt.Println(lberr.Trace)
-			os.Exit(lberr.Code)
+		if err, ok := asLbErr(err); ok && err.Trace != "" {
+			fmt.Println(err.Trace)
+			os.Exit(int(err.Code))
 		}
 		os.Exit(1)
 	}
