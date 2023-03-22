@@ -434,8 +434,9 @@ func (l *lbCoreFFI) Validate() ([]string, error) {
 
 func newErrorFromC(e C.LbError) error {
 	return &Error{
-		Code: ErrorCode(e.code),
-		Msg:  C.GoString(e.msg),
+		Code:  ErrorCode(e.code),
+		Msg:   C.GoString(e.msg),
+		Trace: C.GoString(e.trace),
 	}
 }
 

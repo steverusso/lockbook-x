@@ -75,8 +75,7 @@ func (c *syncCmd) run(core lockbook.Core) error {
 	}
 	err := core.SyncAll(syncProgress)
 	if err != nil {
-		fmt.Println()
-		return err
+		return fmt.Errorf("syncing: %w", err)
 	}
 	if c.verbose {
 		fmt.Println("done")
@@ -259,6 +258,11 @@ func run() error {
 func main() {
 	if err := run(); err != nil {
 		fmt.Printf("\033[1;31merror:\033[0m %v\n", err)
+		var lberr *lockbook.Error
+		if errors.As(err, &lberr) && lberr != nil && lberr.Trace != "" {
+			fmt.Println(lberr.Trace)
+			os.Exit(lberr.Code)
+		}
 		os.Exit(1)
 	}
 }

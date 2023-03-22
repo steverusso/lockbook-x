@@ -3,7 +3,7 @@
 version: '3'
 
 vars:
-  GO_LDFLAGS: '-ldflags "-s -w"'
+  GO_LDFLAGS: '-ldflags "-w"'
   C_INTERFACE_LIB: target/release/libc_interface_v2.a
   C_INTERFACE_HEADER: lockbook_core.h
 
@@ -46,7 +46,7 @@ tasks:
       - task: rust-lint
     sources:
       - ../lockbook/libs/**/*
-      - src/**
+      - ./**
       - cbindgen.toml
     generates:
       - ../{{.C_INTERFACE_LIB}}

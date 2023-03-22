@@ -128,8 +128,7 @@ pub unsafe extern "C" fn lb_sync_all(
     progress: LbSyncProgressCallback,
     user_data: *mut c_void,
 ) -> LbError {
-    let mut e = lb_error_none();
-    if let Err(err) = core!(core).sync(Some(Box::new(move |sp| {
+    match core!(core).sync(Some(Box::new(move |sp| {
         let mut cwu = LbClientWorkUnit {
             pull_meta: false,
             push_meta: false,
@@ -149,9 +148,9 @@ pub unsafe extern "C" fn lb_sync_all(
         };
         progress(c_sp, user_data);
     }))) {
-        e = lberr(err);
+        Ok(_work) => lb_error_none(),
+        Err(err) => lberr(err),
     }
-    e
 }
 
 #[repr(C)]

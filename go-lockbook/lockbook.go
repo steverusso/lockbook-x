@@ -120,8 +120,9 @@ const (
 )
 
 type Error struct {
-	Code ErrorCode
-	Msg  string
+	Code  ErrorCode
+	Msg   string
+	Trace string
 }
 
 func (e *Error) Error() string {

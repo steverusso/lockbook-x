@@ -47,7 +47,7 @@ unsafe fn lberr(le: lockbook_core::LbError) -> LbError {
     e.msg = cstr(format!("{:?}", le.kind));
     e.code = lb_error_code(le.kind);
     if let Some(trace) = le.backtrace {
-        e.trace = cstr(format!("{:?}", trace));
+        e.trace = cstr(format!("{:#?}", trace));
     }
     e
 }
@@ -56,7 +56,9 @@ unsafe fn lberr_unexpected(ue: lockbook_core::UnexpectedError) -> LbError {
     let mut e = lb_error_none();
     e.msg = cstr(ue.msg);
     e.code = LbErrorCode::Unexpected;
-    e.trace = cstr(format!("{:?}", ue.backtrace));
+    if let Some(trace) = ue.backtrace {
+        e.trace = cstr(format!("{:?}", trace));
+    }
     e
 }
 
