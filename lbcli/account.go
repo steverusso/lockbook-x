@@ -139,7 +139,7 @@ func (c acctPrivKeyCmd) run(core lockbook.Core) error {
 		return fmt.Errorf("exporting account: %w", err)
 	}
 	if !c.noPrompt {
-		if isStdinPipe() {
+		if isStdoutPipe() {
 			fmt.Fprintln(os.Stderr, "warning: use the `--no-prompt` option when piping your private key to stdout")
 			return nil
 		}

@@ -195,6 +195,14 @@ func isStdinPipe() bool {
 	return fi.Mode()&os.ModeNamedPipe != 0
 }
 
+func isStdoutPipe() bool {
+	fi, err := os.Stdout.Stat()
+	if err != nil {
+		panic(err)
+	}
+	return fi.Mode()&os.ModeNamedPipe != 0
+}
+
 func run() error {
 	// Figure out data directory.
 	dataDir := os.Getenv("LOCKBOOK_PATH")
