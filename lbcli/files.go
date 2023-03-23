@@ -90,8 +90,7 @@ type renameCmd struct {
 
 func (c *renameCmd) run(core lockbook.Core) error {
 	if c.newName == "" && c.force {
-		fmt.Fprintf(os.Stderr, "error: must provide new name if --force\n")
-		os.Exit(1)
+		return errors.New("must provide new name if --force")
 	}
 	id, err := idFromSomething(core, c.target)
 	if err != nil {
