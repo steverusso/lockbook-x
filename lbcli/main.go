@@ -203,6 +203,17 @@ func isStdoutPipe() bool {
 	return fi.Mode()&os.ModeNamedPipe != 0
 }
 
+func hasAccount(core lockbook.Core) (bool, error) {
+	_, err := core.GetAccount()
+	if err, ok := asLbErr(err); ok && err.Code == lockbook.CodeAccountNonexistent {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("getting account: %v", err)
+	}
+	return true, nil
+}
+
 func run() error {
 	// Figure out data directory.
 	dataDir := os.Getenv("LOCKBOOK_PATH")
@@ -223,15 +234,18 @@ func run() error {
 	lb := lbcli{}
 	lb.parse(os.Args)
 
-	// Check for an account before every command besides `init` or `restore`.
-	if lb.acct == nil || lb.acct.init == nil || lb.acct.restore == nil {
-		_, err = core.GetAccount()
-		if err, ok := err.(*lockbook.Error); ok && err.Code == lockbook.CodeAccountNonexistent {
-			return errors.New("no account! run 'acct init' or 'acct restore' to get started.")
+	// Make sure there's no account when initializing or restoring, and that there is an
+	// account for all other actions.
+	hasAcct, err := hasAccount(core)
+	if err != nil {
+		return err
+	}
+	if lb.acct != nil && (lb.acct.init != nil || lb.acct.restore != nil) {
+		if hasAcct {
+			return fmt.Errorf("an account already exists for data-dir %q", dataDir)
 		}
-		if err != nil {
-			return fmt.Errorf("getting account: %v", err)
-		}
+	} else if !hasAcct {
+		return errors.New("no account! run 'acct init' or 'acct restore' to get started.")
 	}
 
 	switch {
