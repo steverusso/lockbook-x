@@ -108,7 +108,7 @@ func getDataDir() string {
 	}
 	home, err := os.UserHomeDir()
 	if err == nil {
-		return filepath.Join(home, ".lockbook/cli")
+		return filepath.Join(home, ".lockbook/lbgui")
 	}
 	log.Printf("getting user home dir: %v", err)
 	return filepath.Join(".", ".lockbook")

@@ -203,7 +203,7 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("getting user home dir: %v", err)
 		}
-		dataDir = filepath.Join(home, ".lockbook/cli")
+		dataDir = filepath.Join(home, ".lockbook/lbcli")
 	}
 
 	// Initialize a new lockbook Core instance.
