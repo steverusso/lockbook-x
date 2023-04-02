@@ -13,7 +13,6 @@ extern void go_sync_callback(struct LbSyncProgress sp, void *h);
 import "C"
 
 import (
-	"os"
 	"runtime/cgo"
 	"time"
 	"unsafe"
@@ -47,9 +46,9 @@ func (l *lbCoreFFI) GetAccount() (Account, error) {
 	return goAccountResult(r)
 }
 
-func (l *lbCoreFFI) CreateAccount(uname string, welcome bool) (Account, error) {
+func (l *lbCoreFFI) CreateAccount(uname, apiURL string, welcome bool) (Account, error) {
 	cUname := C.CString(uname)
-	cAPIURL := C.CString(os.Getenv("API_URL"))
+	cAPIURL := C.CString(apiURL)
 	r := C.lb_create_account(l.ref, cUname, cAPIURL, C.bool(welcome))
 	C.free(unsafe.Pointer(cAPIURL))
 	C.free(unsafe.Pointer(cUname))

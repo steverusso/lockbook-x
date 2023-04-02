@@ -68,7 +68,7 @@ func (c *acctInitCmd) run(core lockbook.Core) error {
 		apiURL = lockbook.DefaultAPILocation
 	}
 	fmt.Println("generating keys and checking for username availability...")
-	_, err := core.CreateAccount(uname, c.welcome)
+	_, err := core.CreateAccount(uname, apiURL, c.welcome)
 	if err != nil {
 		return fmt.Errorf("creating account: %w", err)
 	}

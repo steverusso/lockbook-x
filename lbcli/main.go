@@ -245,7 +245,7 @@ func run() error {
 			return fmt.Errorf("an account already exists for data-dir %q", dataDir)
 		}
 	} else if !hasAcct {
-		return errors.New("no account! run 'acct init' or 'acct restore' to get started.")
+		return errors.New("no account! run 'acct init' or 'acct restore' to get started")
 	}
 
 	switch {

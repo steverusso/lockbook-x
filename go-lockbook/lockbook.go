@@ -13,7 +13,7 @@ type Core interface {
 	WriteablePath() string
 
 	GetAccount() (Account, error)
-	CreateAccount(uname string, welcome bool) (Account, error)
+	CreateAccount(uname, apiURL string, welcome bool) (Account, error)
 	ImportAccount(acctStr string) (Account, error)
 	ExportAccount() (string, error)
 
@@ -163,9 +163,9 @@ type (
 	FileTypeLink     struct{ Target FileID }
 )
 
-func (_ FileTypeDocument) implsFileType() {}
-func (_ FileTypeFolder) implsFileType()   {}
-func (_ FileTypeLink) implsFileType()     {}
+func (FileTypeDocument) implsFileType() {}
+func (FileTypeFolder) implsFileType()   {}
+func (FileTypeLink) implsFileType()     {}
 
 func FileTypeString(t FileType) string {
 	switch t := t.(type) {
