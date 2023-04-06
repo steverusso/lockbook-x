@@ -23,14 +23,9 @@ func exitMissingArg(u clapUsagePrinter, name string) {
 }
 
 func exitUnknownCmd(u clapUsagePrinter, name string) {
-	claperr("unknown command '%%s'\n", name)
+	claperr("unknown command '%s'\n", name)
 	u.printUsage(os.Stderr)
 	os.Exit(1)
-}
-
-func exitUsgGood(u clapUsagePrinter) {
-	u.printUsage(os.Stdout)
-	os.Exit(0)
 }
 
 func clapParseBool(s string) bool {
@@ -38,7 +33,7 @@ func clapParseBool(s string) bool {
 		return true
 	}
 	if s != "false" {
-		claperr("invalid boolean value '%%s'\n", s)
+		claperr("invalid boolean value '%s'\n", s)
 		os.Exit(1)
 	}
 	return false
@@ -66,6 +61,53 @@ func optParts(arg string) (string, string, bool) {
 	return arg, "", false
 }
 
+type clapOpt struct {
+	long  string
+	short string
+	v     any
+}
+
+func parseOpts(args []string, u clapUsagePrinter, data []clapOpt) int {
+	var i int
+argsLoop:
+	for ; i < len(args); i++ {
+		if args[i][0] != '-' {
+			break
+		}
+		if args[i] == "--" {
+			i++
+			break
+		}
+		k, eqv, hasEq := optParts(args[i][1:])
+		if k == "h" || k == "help" {
+			u.printUsage(os.Stdout)
+			os.Exit(0)
+		}
+		for z := range data {
+			if k == data[z].long || k == data[z].short {
+				switch v := data[z].v.(type) {
+				case *bool:
+					*v = clapParseBool(eqv)
+				case *string:
+					if hasEq {
+						*v = eqv
+					} else if i == len(args)-1 {
+						claperr("string option '%s' needs an argument\n", k)
+						os.Exit(1)
+					} else {
+						i++
+						*v = args[i]
+					}
+				}
+				continue argsLoop
+			}
+		}
+		claperr("unknown option '%s'\n", k)
+		os.Exit(1)
+	}
+	return i
+}
+
 func (*acctInitCmd) printUsage(to *os.File) {
 	fmt.Fprintf(to, `%[1]s acct init - create a lockbook account
 
@@ -80,29 +122,10 @@ options:
 }
 
 func (c *acctInitCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "welcome":
-			c.welcome = clapParseBool(eqv)
-		case "no-sync":
-			c.noSync = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, []clapOpt{
+		{"welcome", "", &c.welcome},
+		{"no-sync", "", &c.noSync},
+	})
 }
 
 func (*acctRestoreCmd) printUsage(to *os.File) {
@@ -123,27 +146,9 @@ options:
 }
 
 func (c *acctRestoreCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "no-sync":
-			c.noSync = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, []clapOpt{
+		{"no-sync", "", &c.noSync},
+	})
 }
 
 func (*acctPrivKeyCmd) printUsage(to *os.File) {
@@ -165,27 +170,9 @@ options:
 }
 
 func (c *acctPrivKeyCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "no-prompt":
-			c.noPrompt = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, []clapOpt{
+		{"no-prompt", "", &c.noPrompt},
+	})
 }
 
 func (*acctStatusCmd) printUsage(to *os.File) {
@@ -200,25 +187,7 @@ options:
 }
 
 func (c *acctStatusCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, nil)
 }
 
 func (*acctSubscribeCmd) printUsage(to *os.File) {
@@ -233,25 +202,7 @@ options:
 }
 
 func (c *acctSubscribeCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, nil)
 }
 
 func (*acctUnsubscribeCmd) printUsage(to *os.File) {
@@ -266,25 +217,7 @@ options:
 }
 
 func (c *acctUnsubscribeCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, nil)
 }
 
 func (*acctCmd) printUsage(to *os.File) {
@@ -307,25 +240,7 @@ subcommands:
 }
 
 func (c *acctCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	if i >= len(args) {
 		c.printUsage(os.Stderr)
 		os.Exit(1)
@@ -369,25 +284,7 @@ arguments:
 }
 
 func (c *catCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<target>")
@@ -410,25 +307,7 @@ arguments:
 }
 
 func (c *debugFinfoCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<target>")
@@ -448,25 +327,7 @@ options:
 }
 
 func (c *debugValidateCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, nil)
 }
 
 func (*debugWhoamiCmd) printUsage(to *os.File) {
@@ -481,25 +342,7 @@ options:
 }
 
 func (c *debugWhoamiCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, nil)
 }
 
 func (*debugCmd) printUsage(to *os.File) {
@@ -519,25 +362,7 @@ subcommands:
 }
 
 func (c *debugCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	if i >= len(args) {
 		c.printUsage(os.Stderr)
 		os.Exit(1)
@@ -576,37 +401,10 @@ arguments:
 }
 
 func (c *exportCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, hasEq := optParts(args[i][1:])
-
-		switch k {
-		case "img-fmt", "i":
-			if hasEq {
-				c.imgFmt = eqv
-			} else if i == len(args)-1 {
-				claperr("string option '%s' needs an argument\n", k)
-				os.Exit(1)
-			} else {
-				i++
-				c.imgFmt = args[i]
-			}
-		case "quiet", "q":
-			c.quiet = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, []clapOpt{
+		{"img-fmt", "i", &c.imgFmt},
+		{"quiet", "q", &c.quiet},
+	})
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<target>")
@@ -635,27 +433,9 @@ arguments:
 }
 
 func (c *importCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "quiet", "q":
-			c.quiet = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, []clapOpt{
+		{"quiet", "q", &c.quiet},
+	})
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<diskpath>")
@@ -685,39 +465,11 @@ arguments:
 }
 
 func (c *jotCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, hasEq := optParts(args[i][1:])
-
-		switch k {
-		case "dateit", "d":
-			c.dateIt = clapParseBool(eqv)
-		case "dateit-after", "D":
-			c.dateItAfter = clapParseBool(eqv)
-		case "target", "t":
-			if hasEq {
-				c.target = eqv
-			} else if i == len(args)-1 {
-				claperr("string option '%s' needs an argument\n", k)
-				os.Exit(1)
-			} else {
-				i++
-				c.target = args[i]
-			}
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, []clapOpt{
+		{"dateit", "d", &c.dateIt},
+		{"dateit-after", "D", &c.dateItAfter},
+		{"target", "t", &c.target},
+	})
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<message>")
@@ -746,37 +498,14 @@ arguments:
 }
 
 func (c *lsCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "short", "s":
-			c.short = clapParseBool(eqv)
-		case "recursive", "r":
-			c.recursive = clapParseBool(eqv)
-		case "paths":
-			c.paths = clapParseBool(eqv)
-		case "dirs":
-			c.onlyDirs = clapParseBool(eqv)
-		case "docs":
-			c.onlyDocs = clapParseBool(eqv)
-		case "ids":
-			c.fullIDs = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, []clapOpt{
+		{"short", "s", &c.short},
+		{"recursive", "r", &c.recursive},
+		{"paths", "", &c.paths},
+		{"dirs", "", &c.onlyDirs},
+		{"docs", "", &c.onlyDocs},
+		{"ids", "", &c.fullIDs},
+	})
 	args = args[i:]
 	if len(args) < 1 {
 		return
@@ -799,25 +528,7 @@ arguments:
 }
 
 func (c *mkdirCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<path>")
@@ -840,25 +551,7 @@ arguments:
 }
 
 func (c *mkdocCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<path>")
@@ -882,25 +575,7 @@ arguments:
 }
 
 func (c *mvCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<src>")
@@ -929,27 +604,9 @@ arguments:
 }
 
 func (c *renameCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "force", "f":
-			c.force = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, []clapOpt{
+		{"force", "f", &c.force},
+	})
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<target>")
@@ -977,27 +634,9 @@ arguments:
 }
 
 func (c *rmCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "force", "f":
-			c.force = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, []clapOpt{
+		{"force", "f", &c.force},
+	})
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<target>")
@@ -1022,27 +661,9 @@ arguments:
 }
 
 func (c *shareCreateCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "ro":
-			c.readOnly = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, []clapOpt{
+		{"ro", "", &c.readOnly},
+	})
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<target>")
@@ -1067,27 +688,9 @@ options:
 }
 
 func (c *sharePendingCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "ids":
-			c.fullIDs = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, []clapOpt{
+		{"ids", "", &c.fullIDs},
+	})
 }
 
 func (*shareAcceptCmd) printUsage(to *os.File) {
@@ -1107,25 +710,7 @@ arguments:
 }
 
 func (c *shareAcceptCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<target>")
@@ -1156,25 +741,7 @@ arguments:
 }
 
 func (c *shareRejectCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<target>")
@@ -1200,25 +767,7 @@ subcommands:
 }
 
 func (c *shareCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	if i >= len(args) {
 		c.printUsage(os.Stderr)
 		os.Exit(1)
@@ -1255,29 +804,10 @@ options:
 }
 
 func (c *syncCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "status", "s":
-			c.status = clapParseBool(eqv)
-		case "verbose", "v":
-			c.verbose = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, []clapOpt{
+		{"status", "s", &c.status},
+		{"verbose", "v", &c.verbose},
+	})
 }
 
 func (*usageCmd) printUsage(to *os.File) {
@@ -1293,27 +823,9 @@ options:
 }
 
 func (c *usageCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "exact", "e":
-			c.exact = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	parseOpts(args, c, []clapOpt{
+		{"exact", "e", &c.exact},
+	})
 }
 
 func (*writeCmd) printUsage(to *os.File) {
@@ -1332,27 +844,9 @@ arguments:
 }
 
 func (c *writeCmd) parse(args []string) {
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, _ := optParts(args[i][1:])
-
-		switch k {
-		case "trunc":
-			c.trunc = clapParseBool(eqv)
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, []clapOpt{
+		{"trunc", "", &c.trunc},
+	})
 	args = args[i:]
 	if len(args) < 1 {
 		exitMissingArg(c, "<target>")
@@ -1395,25 +889,7 @@ func (c *lbcli) parse(args []string) {
 	if len(args) > 0 && len(args) == len(os.Args) {
 		args = args[1:]
 	}
-	var i int
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, _, _ := optParts(args[i][1:])
-
-		switch k {
-		case "help", "h":
-			exitUsgGood(c)
-		default:
-			claperr("unknown option '%s'\n", k)
-			os.Exit(1)
-		}
-	}
+	i := parseOpts(args, c, nil)
 	if i >= len(args) {
 		c.printUsage(os.Stderr)
 		os.Exit(1)
