@@ -485,7 +485,8 @@ usage:
 
 options:
    -s, --short       just display the name (or file path)
-   -r, --recursive   recursively include all children of the target directory
+   -r, --recursive   recursively list children of the target directory
+   -t, --tree        recursively list children of the target directory in a tree format
        --paths       show absolute file paths instead of file names
        --dirs        only show folders
        --docs        only show documents
@@ -501,6 +502,7 @@ func (c *lsCmd) parse(args []string) {
 	i := parseOpts(args, c, []clapOpt{
 		{"short", "s", &c.short},
 		{"recursive", "r", &c.recursive},
+		{"tree", "t", &c.tree},
 		{"paths", "", &c.paths},
 		{"dirs", "", &c.onlyDirs},
 		{"docs", "", &c.onlyDocs},

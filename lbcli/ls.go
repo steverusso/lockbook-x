@@ -15,10 +15,14 @@ type lsCmd struct {
 	//
 	// clap:opt short,s
 	short bool
-	// Recursively include all children of the target directory.
+	// Recursively list children of the target directory.
 	//
 	// clap:opt recursive,r
 	recursive bool
+	// Recursively list children of the target directory in a tree format.
+	//
+	// clap:opt tree,t
+	tree bool
 	// Show absolute file paths instead of file names.
 	//
 	// clap:opt paths
@@ -44,6 +48,7 @@ type lsConfig struct {
 	idWidth   int
 	nameWidth int
 	short     bool
+	tree      bool
 	paths     bool
 	onlyDirs  bool
 	onlyDocs  bool
@@ -51,12 +56,13 @@ type lsConfig struct {
 }
 
 type fileNode struct {
-	id       lockbook.FileID
-	dirName  string
-	name     string
-	isDir    bool
-	shared   lsShareInfo
-	children []fileNode
+	id         lockbook.FileID
+	treePrefix string
+	dirName    string
+	name       string
+	isDir      bool
+	shared     lsShareInfo
+	children   []fileNode
 }
 
 func (fn *fileNode) text(cfg *lsConfig) string {
@@ -67,6 +73,9 @@ func (fn *fileNode) text(cfg *lsConfig) string {
 	nameOrPath := fn.name
 	if cfg.paths {
 		nameOrPath = fn.dirName + fn.name
+	}
+	if cfg.tree {
+		nameOrPath = fn.treePrefix + nameOrPath
 	}
 	fmt.Fprintf(&s, "%-*s", cfg.nameWidth, nameOrPath)
 	if !cfg.short {
@@ -144,6 +153,61 @@ func getChildren(core lockbook.Core, files []lockbook.File, parent lockbook.File
 	return children, nil
 }
 
+type branch int
+
+const (
+	branchDefault   branch = iota // Any child node except the last.
+	branchLastChild               // Last sibling node in list of children.
+	branchNone                    // Empty space.
+)
+
+// treeifyNode sets the given file node's tree prefix and makes the adjustments for the
+// maximum name length config.
+func treeifyNode(cfg *lsConfig, fn *fileNode, branchSlots []branch) {
+	fn.treePrefix = getTreePrefix(branchSlots)
+	// Adjust for longest name length, accounting for the tree prefixes now.
+	{
+		nameLen := len(fn.name)
+		if cfg.paths {
+			nameLen += len(fn.dirName)
+		}
+		if w := nameLen + len(fn.treePrefix); w > cfg.nameWidth {
+			cfg.nameWidth = w
+		}
+	}
+	// If this node was the last child of its parent, then we no longer show its branch
+	// for the rest of the grandchildren.
+	if n := len(branchSlots); n > 0 && branchSlots[n-1] == branchLastChild {
+		branchSlots[n-1] = branchNone
+	}
+	for i := range fn.children {
+		b := branchDefault
+		if i == len(fn.children)-1 {
+			b = branchLastChild
+		}
+		treeifyNode(cfg, &fn.children[i], append(branchSlots, b))
+	}
+}
+
+func getTreePrefix(slots []branch) string {
+	var s strings.Builder
+	for i, b := range slots {
+		switch b {
+		case branchDefault:
+			if i == len(slots)-1 {
+				s.WriteString("├── ")
+			} else {
+				s.WriteString("│   ")
+			}
+		case branchLastChild:
+			s.WriteString("└── ")
+		case branchNone:
+			s.WriteString("    ")
+		}
+	}
+	return s.String()
+}
+
 type lsShareInfo struct {
 	by   string
 	with string
@@ -175,6 +239,9 @@ func getShareInfo(shares []lockbook.Share, myName string) lsShareInfo {
 }
 
 func (ls *lsCmd) run(core lockbook.Core) error {
+	if ls.tree {
+		ls.recursive = true
+	}
 	if ls.target == "" {
 		ls.target = "/"
 	}
@@ -222,6 +289,7 @@ func (ls *lsCmd) run(core lockbook.Core) error {
 		myName:   acct.Username,
 		idWidth:  idWidth,
 		short:    ls.short,
+		tree:     ls.tree,
 		paths:    ls.paths,
 		onlyDirs: ls.onlyDirs,
 		onlyDocs: ls.onlyDocs,
@@ -230,6 +298,11 @@ func (ls *lsCmd) run(core lockbook.Core) error {
 	infos, err := getChildren(core, files, f.ID, &cfg)
 	if err != nil {
 		return fmt.Errorf("getting child nodes: %w", err)
+	}
+	if ls.tree {
+		for i := range infos {
+			treeifyNode(&cfg, &infos[i], []branch{})
+		}
 	}
 	for i := range infos {
 		infos[i].printOut(&cfg)
