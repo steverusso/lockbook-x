@@ -53,16 +53,6 @@ lbcli ls -r --paths
 
 ### Other cool things
 
-* print pending shares in a readable table
-* read-only shares
-* accept a share using a custom name
-* nice output for `debug finfo` by default (with option for raw)
-
-## TODO
-
-I believe the only major Lockbook feature missing is the ability to import files (which
-will be implemented after I get to that endpoint in the C and then Go bindings). Beyond
-that, it'd be cool to have:
-
-* tab completions
-* ability to "take" shares (copy the file and delete the pending share)
+* `ls --tree`
+* `jot` command
+* `write` command

@@ -49,11 +49,11 @@ func (c *debugFinfoCmd) run(core lockbook.Core) error {
 	if err != nil {
 		return fmt.Errorf("getting account: %w", err)
 	}
-	printFile(f, acct.Username)
+	printFile(&f, acct.Username)
 	return nil
 }
 
-func printFile(f lockbook.File, myName string) {
+func printFile(f *lockbook.File, myName string) {
 	// Build the text that will contain share info.
 	shares := ""
 	for _, sh := range f.Shares {
@@ -68,7 +68,7 @@ func printFile(f lockbook.File, myName string) {
 		mode := strings.ToLower(sh.Mode.String())
 		shares += fmt.Sprintf("\n    %s -> %s (%s)", sharedBy, sharedWith, mode)
 	}
-	data := [][2]string{
+	data := [...][2]string{
 		{"name", f.Name},
 		{"id", f.ID.String()},
 		{"parent", f.Parent.String()},
