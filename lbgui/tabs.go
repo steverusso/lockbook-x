@@ -34,7 +34,7 @@ func (t *tab) isDirty() bool {
 func (ws *workspace) layTabsNotebook(gtx C, th *material.Theme) D {
 	if len(ws.tabs) == 0 {
 		return layout.Center.Layout(gtx, func(gtx C) D {
-			return material.Body1(th, "No opened documents!").Layout(gtx)
+			return ws.logo.Layout(gtx)
 		})
 	}
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -181,5 +181,12 @@ func (ws *workspace) setTabMarkdown(id lockbook.FileID, data []byte) {
 			ws.tabs[i].view.Editor.Focus()
 			return
 		}
+	}
+}
+
+func (ws *workspace) closeActiveTab() {
+	ws.tabs = append(ws.tabs[:ws.activeTab], ws.tabs[ws.activeTab+1:]...)
+	if ws.activeTab >= len(ws.tabs) && ws.activeTab != 0 {
+		ws.activeTab--
 	}
 }

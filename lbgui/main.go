@@ -98,11 +98,15 @@ func (lb *legitbook) handleKeyEvent(gtx C, e key.Event) {
 		lb.work.animStage.reverse()
 		return
 	}
-	switch lb.work.animStage {
-	case wsExplOpen:
-		lb.handleExplEvent(gtx, e)
-	case wsExplClosed:
-		lb.handleTabsEvent(gtx, e)
+	if lb.work.mode == wsModeExpl {
+		switch lb.work.animStage {
+		case wsExplOpen:
+			lb.handleExplEvent(gtx, e)
+		case wsExplClosed:
+			lb.handleTabsEvent(gtx, e)
+		}
+	} else {
+		lb.work.handleKeyEvent(gtx, e)
 	}
 }
 
@@ -136,7 +140,7 @@ func (lb *legitbook) handleTabsEvent(gtx C, e key.Event) {
 
 func run() error {
 	win := app.NewWindow(
-		app.Size(1250, 800),
+		app.Size(900, 800),
 		app.Title("Legitbook"),
 	)
 
@@ -195,7 +199,7 @@ func run() error {
 				lb.frame(gtx)
 				e.Frame(gtx.Ops)
 				if *printFrameTimes {
-					log.Println(time.Now().Sub(start))
+					log.Println(time.Since(start))
 				}
 			case system.DestroyEvent:
 				return e.Err

@@ -1,22 +1,30 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"image"
 	"image/color"
 	"log"
+	"strconv"
 	"time"
 
 	"gioui.org/gesture"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/gofrs/uuid"
 	"github.com/steverusso/lockbook-x/go-lockbook"
+	"golang.org/x/image/draw"
 )
+
+//go:embed lockbook.png
+var logoBytes []byte
 
 const (
 	autoSyncInterval = time.Second * 5
@@ -26,8 +34,8 @@ const (
 type wsLayoutMode uint8
 
 const (
-	wsLayoutModeTree wsLayoutMode = iota
-	wsLayoutModeExpl
+	wsModeTree wsLayoutMode = iota
+	wsModeExpl
 )
 
 type wsAnimStage int
@@ -110,6 +118,7 @@ type workspace struct {
 	modalCatch gesture.Click
 
 	tree fileTree
+	logo widget.Image
 
 	expl      fileExplorer
 	animStage wsAnimStage
@@ -141,6 +150,7 @@ func newWorkspace(updates chan<- legitUpdate, h handoffToWorkspace) workspace {
 	ws.tree.list.List.Axis = layout.Vertical
 	ws.tree.root = newFileTreeEntry(h.root, h.rootFiles)
 	ws.tree.root.isExpanded = true
+	ws.logo = buildLogo()
 	ws.tabList.Axis = layout.Vertical
 	ws.expl.entryList.Axis = layout.Vertical
 	ws.expl.populate(nil, h.rootFiles)
@@ -150,10 +160,41 @@ func newWorkspace(updates chan<- legitUpdate, h handoffToWorkspace) workspace {
 	return ws
 }
 
+func buildLogo() widget.Image {
+	img := decodeImage(logoBytes)
+	imgOp := paint.NewImageOp(img)
+	sz := 320
+	if imgOp.Size().X != sz {
+		irgb := image.NewRGBA(image.Rectangle{Max: image.Pt(sz, sz)})
+		draw.ApproxBiLinear.Scale(irgb, irgb.Bounds(), img, img.Bounds(), draw.Src, nil)
+		imgOp = paint.NewImageOp(irgb)
+	}
+	return widget.Image{
+		Src:   imgOp,
+		Scale: float32(sz) / float32(unit.Dp(sz)),
+	}
+}
+
+func (ws *workspace) handleKeyEvent(gtx C, e key.Event) {
+	switch e.Modifiers {
+	case key.ModCtrl:
+		switch e.Name {
+		case "W":
+			ws.closeActiveTab()
+		}
+	case key.ModAlt:
+		switch e.Name {
+		case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+			n, _ := strconv.Atoi(e.Name)
+			ws.selectTab(n - 1)
+		}
+	}
+}
+
 // setLastEditAt resets the auto-save timer if the duration between now and the edit
 // before this one is longer than the auto-save interval.
 func (ws *workspace) setLastEditAt(t time.Time) {
-	sinceLastEdit := time.Now().Sub(ws.lastEditAt)
+	sinceLastEdit := time.Since(ws.lastEditAt)
 	if sinceLastEdit > autoSaveInterval {
 		ws.autoSaveTimer.Reset(autoSaveInterval)
 	}
@@ -165,7 +206,7 @@ func (ws *workspace) setLastEditAt(t time.Time) {
 // than the auto-sync interval.
 func (ws *workspace) setLastActionAt(t time.Time) {
 	ws.lastActionAt = t
-	if !ws.isSyncing && ws.nextSyncAt.Sub(time.Now()) > autoSyncInterval {
+	if !ws.isSyncing && time.Until(ws.nextSyncAt) > autoSyncInterval {
 		ws.manualSync <- struct{}{}
 	}
 }
@@ -260,7 +301,7 @@ func (ws *workspace) handleUpdate(u wsUpdate) {
 				ws.tabs[i].numQueuedSaves++
 			}
 		}
-		sinceLastEdit := time.Now().Sub(ws.lastEditAt)
+		sinceLastEdit := time.Since(ws.lastEditAt)
 		if sinceLastEdit < autoSaveInterval {
 			ws.autoSaveTimer.Reset(autoSaveInterval)
 		}
@@ -320,17 +361,39 @@ func (ws *workspace) handleSyncResult(sr syncResult) {
 }
 
 func (ws *workspace) layout(gtx C, th *material.Theme) D {
-	if ws.mode == wsLayoutModeExpl {
+	if ws.mode == wsModeExpl {
 		return ws.layoutExplMode(gtx, th)
 	}
 	return ws.layoutTreeMode(gtx, th)
 }
 
 func (ws *workspace) layoutTreeMode(gtx C, th *material.Theme) D {
+	pm := &ws.tree.popup
+	if pm.state == popupStateOpenNext {
+		// fmt.Printf("%+v\n", *pm)
+		pm.state = popupStateOpen
+	}
+	if pm.state == popupStateOpen {
+		return layout.Stack{}.Layout(gtx,
+			layout.Expanded(func(gtx C) D {
+				return ws.layoutTreeModeBaseLayer(gtx, th)
+			}),
+			layout.Stacked(func(gtx C) D {
+				return ws.layoutTreePopup(gtx, th)
+			}),
+		)
+	}
+	dims := ws.layoutTreeModeBaseLayer(gtx, th)
+	ws.layModalLayer(gtx, th)
+	return dims
+}
+
+func (ws *workspace) layoutTreeModeBaseLayer(gtx C, th *material.Theme) D {
 	// sidebar
 	sbWidth := 300
 	{
 		gtx1 := gtx
+		gtx1.Constraints.Min.X = sbWidth
 		gtx1.Constraints.Max.X = sbWidth
 		_ = ws.layFileTree(gtx1, th)
 	}
@@ -459,14 +522,30 @@ func (ws *workspace) layModalLayer(gtx C, th *material.Theme) {
 	if len(ws.modals) == 0 {
 		return
 	}
-	paint.Fill(gtx.Ops, color.NRGBA{35, 35, 35, 240})
-	switch m := ws.modals[len(ws.modals)-1].(type) {
-	case *createFilePrompt:
-		ws.layCreateFilePrompt(gtx, th, m)
-	}
+	layout.Stack{}.Layout(gtx,
+		layout.Expanded(func(gtx C) D {
+			paint.Fill(gtx.Ops, color.NRGBA{35, 35, 35, 240})
+			ws.modalCatch.Add(gtx.Ops)
+			return D{Size: gtx.Constraints.Max}
+		}),
+		layout.Stacked(func(gtx C) D {
+			switch m := ws.modals[len(ws.modals)-1].(type) {
+			case *createFilePrompt:
+				return ws.layCreateFilePrompt(gtx, th, m)
+			default:
+				return D{}
+			}
+		}),
+	)
 }
 
 func (ws *workspace) layCreateFilePrompt(gtx C, th *material.Theme, p *createFilePrompt) D {
+	for _, e := range ws.modalCatch.Events(gtx) {
+		if e.Type == gesture.TypePress {
+			ws.modals = ws.modals[:len(ws.modals)-1]
+			return D{}
+		}
+	}
 	for _, e := range p.input.Events() {
 		if e, ok := e.(widget.SubmitEvent); ok {
 			parent := ws.expl.targetID
@@ -488,39 +567,47 @@ func (ws *workspace) layCreateFilePrompt(gtx C, th *material.Theme, p *createFil
 			return D{}
 		}
 	}
-	ws.modalCatch.Add(gtx.Ops)
-	return layout.Center.Layout(gtx, func(gtx C) D {
-		gtx.Constraints.Min.X = 200
-		m := op.Record(gtx.Ops)
-		dims := layout.UniformInset(12).Layout(gtx, func(gtx C) D {
-			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, "New "+lockbook.FileTypeString(p.typ)+":").Layout(gtx)
-				}),
-				layout.Rigid(layout.Spacer{Height: 12}.Layout),
-				layout.Rigid(func(gtx C) D {
-					return material.Editor(th, &p.input, "Hint...").Layout(gtx)
-				}),
-				layout.Rigid(func(gtx C) D {
-					if p.err == nil {
-						return D{}
-					}
-					return layout.Spacer{Height: 12}.Layout(gtx)
-				}),
-				layout.Rigid(func(gtx C) D {
-					if p.err == nil {
-						return D{}
-					}
-					return material.Body2(th, "error: "+p.err.Error()).Layout(gtx)
-				}),
-			)
-		})
-		draw := m.Stop()
 
-		paint.FillShape(gtx.Ops, th.Bg, clip.UniformRRect(image.Rectangle{
-			Max: image.Pt(dims.Size.X, dims.Size.Y),
-		}, 8).Op(gtx.Ops))
-		draw.Add(gtx.Ops)
-		return dims
+	// pointer.InputOp{Tag: p, Grab: true, Types: pointer.Press}.Add(gtx.Ops)
+
+	gtx1 := gtx
+	gtx1.Constraints.Min.X = 200
+	innerMacro := op.Record(gtx1.Ops)
+	innerDims := layout.UniformInset(12).Layout(gtx1, func(gtx C) D {
+		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+			layout.Rigid(func(gtx C) D {
+				return material.Body1(th, "New "+lockbook.FileTypeString(p.typ)+":").Layout(gtx)
+			}),
+			layout.Rigid(layout.Spacer{Height: 12}.Layout),
+			layout.Rigid(func(gtx C) D {
+				return material.Editor(th, &p.input, "Hint...").Layout(gtx)
+			}),
+			layout.Rigid(func(gtx C) D {
+				if p.err == nil {
+					return D{}
+				}
+				return layout.Spacer{Height: 12}.Layout(gtx)
+			}),
+			layout.Rigid(func(gtx C) D {
+				if p.err == nil {
+					return D{}
+				}
+				return material.Body2(th, "error: "+p.err.Error()).Layout(gtx)
+			}),
+		)
+	})
+	innerDraw := innerMacro.Stop()
+	// return innerDims
+	for range gtx.Events(p) {
+		fmt.Println("e")
+	}
+
+	return layout.Center.Layout(gtx, func(gtx C) D {
+		rr := clip.UniformRRect(image.Rectangle{Max: innerDims.Size}, 8)
+		defer rr.Push(gtx.Ops).Pop()
+
+		paint.FillShape(gtx.Ops, th.Bg, rr.Op(gtx.Ops))
+		innerDraw.Add(gtx.Ops)
+		return innerDims
 	})
 }

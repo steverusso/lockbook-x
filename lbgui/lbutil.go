@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/png"
 	"strings"
 
 	"github.com/steverusso/lockbook-x/go-lockbook"
@@ -25,4 +28,13 @@ func getParents(core lockbook.Core, id lockbook.FileID) ([]nameAndID, error) {
 		}}, r...)
 	}
 	return r, nil
+}
+
+func decodeImage(blob []byte) image.Image {
+	imgBuf := bytes.NewReader(blob)
+	img, err := png.Decode(imgBuf)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return img
 }

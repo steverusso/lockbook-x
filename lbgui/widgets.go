@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 
+	"gioui.org/gesture"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -221,4 +222,42 @@ func mergeCalc(a, b uint8, p float32) uint8 {
 	v1 := float32(a) * (1 - p)
 	v2 := float32(b) * p
 	return uint8(v1 + v2)
+}
+
+type popupMenuButton struct {
+	click   gesture.Click
+	pressed bool
+}
+
+func (b *popupMenuButton) Pressed() bool {
+	c := b.pressed
+	b.pressed = false
+	return c
+}
+
+func layPopupMenuItem(gtx C, th *material.Theme, btn *popupMenuButton, txt string) D {
+	for _, e := range btn.click.Events(gtx) {
+		if e.Type == gesture.TypePress {
+			btn.pressed = true
+			break
+		}
+	}
+
+	m := op.Record(gtx.Ops)
+	dims := material.Body2(th, txt).Layout(gtx)
+	call := m.Stop()
+
+	bg := th.Bg
+	if btn.click.Hovered() {
+		bg = th.ContrastFg
+	}
+
+	size := image.Pt(gtx.Constraints.Max.X, dims.Size.Y)
+	defer clip.Rect(image.Rectangle{Max: size}).Push(gtx.Ops).Pop()
+
+	paint.Fill(gtx.Ops, bg)
+	btn.click.Add(gtx.Ops)
+	call.Add(gtx.Ops)
+
+	return D{Size: size}
 }
