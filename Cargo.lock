@@ -1602,7 +1602,7 @@ dependencies = [
 
 [[package]]
 name = "lockbook-core"
-version = "0.7.3"
+version = "0.7.5"
 dependencies = [
  "base64 0.13.1",
  "basic-human-duration",
@@ -1639,7 +1639,7 @@ dependencies = [
 
 [[package]]
 name = "lockbook-server"
-version = "0.7.3"
+version = "0.7.5"
 dependencies = [
  "async-stripe",
  "base64 0.13.1",
@@ -1675,7 +1675,7 @@ dependencies = [
 
 [[package]]
 name = "lockbook-shared"
-version = "0.7.3"
+version = "0.7.5"
 dependencies = [
  "aead",
  "aes-gcm",
@@ -2922,7 +2922,7 @@ dependencies = [
 
 [[package]]
 name = "test_utils"
-version = "0.7.3"
+version = "0.7.5"
 dependencies = [
  "bincode",
  "itertools",
