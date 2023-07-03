@@ -40,19 +40,11 @@ tasks:
   c-ffi-v2:
     dir: lockbook/libs/c_interface_v2
     cmds:
-      - task: rust-fmt
       - cargo build -q --release
       - cbindgen src/lib.rs --config cbindgen.toml > ../../../{{.C_INTERFACE_HEADER}}
-      - task: rust-lint
     sources:
       - ../**/*
       - cbindgen.toml
     generates:
       - ../../{{.C_INTERFACE_LIB}}
       - ../../../{{.C_INTERFACE_HEADER}}
-
-  rust-fmt:
-    - cargo fmt --all --message-format short
-
-  rust-lint:
-    - cargo clippy -q --workspace

@@ -1,7 +1,7 @@
 package lockbook
 
 /*
-#cgo LDFLAGS: ${SRCDIR}/../target/release/libc_interface_v2.a -lm
+#cgo LDFLAGS: ${SRCDIR}/../lockbook/target/release/libc_interface_v2.a -lm
 #include "../lockbook_core.h"
 
 extern void go_import_file_callback(struct LbImportFileInfo info, void *h);
