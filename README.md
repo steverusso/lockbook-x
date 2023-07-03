@@ -24,6 +24,13 @@ as `lbcli` (and other Go projects) will likely live here forever.
   a couple months after being [adopted in its
   entirety](https://github.com/lockbook/lockbook/pull/1715) upstream.
 
+## Getting Started
+
+This project uses [Task](https://taskfile.dev/) to run various build and maintenance
+commands. Once this repo is cloned and [Task is
+installed](https://taskfile.dev/installation/), simply run `task init` to pull in the
+Lockbook submodule files and install the necessary dependency programs.
+
 ## License
 
 This is free and unencumbered software released into the public domain. Please
