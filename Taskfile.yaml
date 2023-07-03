@@ -4,10 +4,17 @@ version: '3'
 
 vars:
   GO_LDFLAGS: '-ldflags "-w"'
-  C_INTERFACE_LIB: target/release/libc_interface_v2.a
-  C_INTERFACE_HEADER: lockbook_core.h
 
 tasks:
+  init:
+    prompt: This will install (or reinstall) the latest version of several programs... Do you want to continue?
+    cmds:
+      - git submodule update --init --recursive
+      - cargo install cbindgen
+      - go install mvdan.cc/gofumpt@latest
+      - go install golang.org/x/tools/cmd/goimports@latest
+      - go install honnef.co/go/tools/cmd/staticcheck@latest
+
   lbcli:
     dir: lbcli
     cmds:
@@ -15,12 +22,11 @@ tasks:
       - task: go-fmt
       - go build {{.GO_LDFLAGS}}
       - task: go-lint
+      - staticcheck ./...
 
   lbcli-install:
-    dir: lbcli
-    cmds:
-      - task: lbcli
-      - cp ./lbcli ~/.local/bin
+    - task: lbcli
+    - cp ./lbcli/lbcli ~/.local/bin
 
   lbgui:
     dir: lbgui
@@ -39,12 +45,14 @@ tasks:
 
   c-ffi-v2:
     dir: lockbook/libs/c_interface_v2
+    vars:
+      C_INTERFACE_HEADER: ../../../lockbook_core.h
     cmds:
       - cargo build -q --release
-      - cbindgen src/lib.rs --config cbindgen.toml > ../../../{{.C_INTERFACE_HEADER}}
+      - cbindgen src/lib.rs --config cbindgen.toml > {{.C_INTERFACE_HEADER}}
     sources:
       - ../**/*
       - cbindgen.toml
     generates:
-      - ../../{{.C_INTERFACE_LIB}}
-      - ../../../{{.C_INTERFACE_HEADER}}
+      - ../../target/release/libc_interface_v2.a
+      - ./{{.C_INTERFACE_HEADER}}
