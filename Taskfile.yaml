@@ -56,3 +56,8 @@ tasks:
     generates:
       - ../../../target/release/libc_interface_v2.a
       - ./{{.C_INTERFACE_HEADER}}
+
+  clean:
+    - cd lockbook && cargo clean
+    - rm lockbook_core.h
+    - go clean -cache
