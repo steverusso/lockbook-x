@@ -131,6 +131,8 @@ func (c *renameCmd) run(core lockbook.Core) error {
 }
 
 // Move a file to another parent.
+//
+// clap:cmd_aliases move
 type mvCmd struct {
 	// The file to move.
 	//

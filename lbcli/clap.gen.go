@@ -2,158 +2,53 @@
 
 package main
 
-import (
-	"fmt"
-	"os"
-	"strings"
-)
+import "github.com/steverusso/goclap/clap"
 
-func claperr(format string, a ...any) {
-	format = "\033[1;31merror:\033[0m " + format
-	fmt.Fprintf(os.Stderr, format, a...)
-}
-
-type clapUsagePrinter interface {
-	printUsage(to *os.File)
-}
-
-func exitMissingArg(u clapUsagePrinter, name string) {
-	claperr("not enough args: no \033[1;33m%s\033[0m provided\n", name)
-	u.printUsage(os.Stderr)
-	os.Exit(1)
-}
-
-func exitUnknownCmd(u clapUsagePrinter, name string) {
-	claperr("unknown command '%s'\n", name)
-	u.printUsage(os.Stderr)
-	os.Exit(1)
-}
-
-func clapParseBool(s string) bool {
-	if s == "" || s == "true" {
-		return true
-	}
-	if s != "false" {
-		claperr("invalid boolean value '%s'\n", s)
-		os.Exit(1)
-	}
-	return false
-}
-
-func optParts(arg string) (string, string, bool) {
-	if arg == "-" {
-		claperr("emtpy option ('-') found\n")
-		os.Exit(1)
-	}
-	if arg[0] == '-' {
-		arg = arg[1:]
-	}
-	if arg[0] == '-' {
-		arg = arg[1:]
-	}
-	if eqIdx := strings.IndexByte(arg, '='); eqIdx != -1 {
-		name := arg[:eqIdx]
-		eqVal := ""
-		if eqIdx < len(arg) {
-			eqVal = arg[eqIdx+1:]
-		}
-		return name, eqVal, true
-	}
-	return arg, "", false
-}
-
-type clapOpt struct {
-	long  string
-	short string
-	v     any
-}
-
-func parseOpts(args []string, u clapUsagePrinter, data []clapOpt) int {
-	var i int
-argsLoop:
-	for ; i < len(args); i++ {
-		if args[i][0] != '-' {
-			break
-		}
-		if args[i] == "--" {
-			i++
-			break
-		}
-		k, eqv, hasEq := optParts(args[i][1:])
-		for z := range data {
-			if k == data[z].long || k == data[z].short {
-				switch v := data[z].v.(type) {
-				case *bool:
-					*v = clapParseBool(eqv)
-				case *string:
-					if hasEq {
-						*v = eqv
-					} else if i == len(args)-1 {
-						claperr("string option '%s' needs an argument\n", k)
-						os.Exit(1)
-					} else {
-						i++
-						*v = args[i]
-					}
-				}
-				continue argsLoop
-			}
-		}
-		if k == "h" || k == "help" {
-			u.printUsage(os.Stdout)
-			os.Exit(0)
-		}
-		claperr("unknown option '%s'\n", k)
-		os.Exit(1)
-	}
-	return i
-}
-
-func (*acctInitCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s acct init - create a lockbook account
+func (*acctInitCmd) UsageHelp() string {
+	return `lbcli acct init - Create a lockbook account
 
 usage:
    init [options]
 
 options:
-       --welcome   include the welcome document
-       --no-sync   don't perform the initial sync
-   -h, --help      show this help message
-`, os.Args[0])
+   -welcome   Include the welcome document
+   -no-sync   Don't perform the initial sync
+   -h         Show this help message`
 }
 
-func (c *acctInitCmd) parse(args []string) {
-	parseOpts(args, c, []clapOpt{
-		{"welcome", "", &c.welcome},
-		{"no-sync", "", &c.noSync},
-	})
+func (c *acctInitCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli acct init")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("welcome", clap.NewBool(&c.welcome))
+	p.Flag("no-sync", clap.NewBool(&c.noSync))
+	p.Parse(args)
 }
 
-func (*acctRestoreCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s acct restore - restore an existing account from its secret account string
+func (*acctRestoreCmd) UsageHelp() string {
+	return `lbcli acct restore - Restore an existing account from its secret account string
 
 overview:
    The restore command reads the secret account string from standard input (stdin).
    In other words, pipe your account string to this command like:
-   'cat lbkey.txt | lbcli restore'.
+   'cat lbkey.txt | lbcli acct restore'.
 
 usage:
    restore [options]
 
 options:
-       --no-sync   don't perform the initial sync
-   -h, --help      show this help message
-`, os.Args[0])
+   -no-sync   Don't perform the initial sync
+   -h         Show this help message`
 }
 
-func (c *acctRestoreCmd) parse(args []string) {
-	parseOpts(args, c, []clapOpt{
-		{"no-sync", "", &c.noSync},
-	})
+func (c *acctRestoreCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli acct restore")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("no-sync", clap.NewBool(&c.noSync))
+	p.Parse(args)
 }
 
-func (*acctPrivKeyCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s acct privkey - print out the private key for this lockbook
+func (*acctPrivKeyCmd) UsageHelp() string {
+	return `lbcli acct privkey - Print out the private key for this lockbook
 
 overview:
    Your private key should always be kept secret and should only be displayed when you are
@@ -165,788 +60,721 @@ usage:
    privkey [options]
 
 options:
-       --no-prompt   don't require confirmation before displaying the private key
-   -h, --help        show this help message
-`, os.Args[0])
+   -no-prompt   Don't require confirmation before displaying the private key
+   -h           Show this help message`
 }
 
-func (c *acctPrivKeyCmd) parse(args []string) {
-	parseOpts(args, c, []clapOpt{
-		{"no-prompt", "", &c.noPrompt},
-	})
+func (c *acctPrivKeyCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli acct privkey")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("no-prompt", clap.NewBool(&c.noPrompt))
+	p.Parse(args)
 }
 
-func (*acctStatusCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s acct status - overview of your account
+func (*acctStatusCmd) UsageHelp() string {
+	return `lbcli acct status - Overview of your account
 
 usage:
    status [options]
 
 options:
-   -h, --help   show this help message
-`, os.Args[0])
+   -h   Show this help message`
 }
 
-func (c *acctStatusCmd) parse(args []string) {
-	parseOpts(args, c, nil)
+func (c *acctStatusCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli acct status")
+	p.CustomUsage = c.UsageHelp
+	p.Parse(args)
 }
 
-func (*acctSubscribeCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s acct subscribe - create a new subscription with a credit card
+func (*acctSubscribeCmd) UsageHelp() string {
+	return `lbcli acct subscribe - Create a new subscription with a credit card
 
 usage:
    subscribe [options]
 
 options:
-   -h, --help   show this help message
-`, os.Args[0])
+   -h   Show this help message`
 }
 
-func (c *acctSubscribeCmd) parse(args []string) {
-	parseOpts(args, c, nil)
+func (c *acctSubscribeCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli acct subscribe")
+	p.CustomUsage = c.UsageHelp
+	p.Parse(args)
 }
 
-func (*acctUnsubscribeCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s acct unsubscribe - cancel an existing subscription
+func (*acctUnsubscribeCmd) UsageHelp() string {
+	return `lbcli acct unsubscribe - Cancel an existing subscription
 
 usage:
    unsubscribe [options]
 
 options:
-   -h, --help   show this help message
-`, os.Args[0])
+   -h   Show this help message`
 }
 
-func (c *acctUnsubscribeCmd) parse(args []string) {
-	parseOpts(args, c, nil)
+func (c *acctUnsubscribeCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli acct unsubscribe")
+	p.CustomUsage = c.UsageHelp
+	p.Parse(args)
 }
 
-func (*acctCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s acct - account related commands
+func (*acctCmd) UsageHelp() string {
+	return `lbcli acct - Account related commands
 
 usage:
    acct <command> [args...]
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 subcommands:
-   init          create a lockbook account
-   restore       restore an existing account from its secret account string
-   privkey       print out the private key for this lockbook
-   status        overview of your account
-   subscribe     create a new subscription with a credit card
-   unsubscribe   cancel an existing subscription
-`, os.Args[0])
+   init          Create a lockbook account
+   restore       Restore an existing account from its secret account string
+   privkey       Print out the private key for this lockbook
+   status        Overview of your account
+   subscribe     Create a new subscription with a credit card
+   unsubscribe   Cancel an existing subscription`
 }
 
-func (c *acctCmd) parse(args []string) {
-	i := parseOpts(args, c, nil)
-	if i >= len(args) {
-		c.printUsage(os.Stderr)
-		os.Exit(1)
+func (c *acctCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli acct")
+	p.CustomUsage = c.UsageHelp
+	rest := p.Parse(args)
+
+	if len(rest) == 0 {
+		p.Fatalf("no subcommand provided")
 	}
-	switch args[i] {
+	switch rest[0] {
 	case "init":
-		c.init = new(acctInitCmd)
-		c.init.parse(args[i+1:])
+		c.init = &acctInitCmd{}
+		c.init.Parse(rest[1:])
 	case "restore":
-		c.restore = new(acctRestoreCmd)
-		c.restore.parse(args[i+1:])
+		c.restore = &acctRestoreCmd{}
+		c.restore.Parse(rest[1:])
 	case "privkey":
-		c.privkey = new(acctPrivKeyCmd)
-		c.privkey.parse(args[i+1:])
+		c.privkey = &acctPrivKeyCmd{}
+		c.privkey.Parse(rest[1:])
 	case "status":
-		c.status = new(acctStatusCmd)
-		c.status.parse(args[i+1:])
+		c.status = &acctStatusCmd{}
+		c.status.Parse(rest[1:])
 	case "subscribe":
-		c.subscribe = new(acctSubscribeCmd)
-		c.subscribe.parse(args[i+1:])
+		c.subscribe = &acctSubscribeCmd{}
+		c.subscribe.Parse(rest[1:])
 	case "unsubscribe":
-		c.unsubscribe = new(acctUnsubscribeCmd)
-		c.unsubscribe.parse(args[i+1:])
+		c.unsubscribe = &acctUnsubscribeCmd{}
+		c.unsubscribe.Parse(rest[1:])
 	default:
-		exitUnknownCmd(c, args[i])
+		p.Fatalf("unknown subcommand '%s'", rest[0])
 	}
 }
 
-func (*catCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s cat - print a document's content
+func (*catCmd) UsageHelp() string {
+	return `lbcli cat - Print a document's content
 
 usage:
    cat [options] <target>
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 arguments:
-   <target>   lockbook file path or ID
-`, os.Args[0])
+   <target>   Lockbook file path or ID`
 }
 
-func (c *catCmd) parse(args []string) {
-	i := parseOpts(args, c, nil)
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<target>")
-	}
-	c.target = args[0]
+func (c *catCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli cat")
+	p.CustomUsage = c.UsageHelp
+	p.Arg("<target>", clap.NewString(&c.target)).Require()
+	p.Parse(args)
 }
 
-func (*debugFinfoCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s debug finfo - view info about a target file
+func (*debugFinfoCmd) UsageHelp() string {
+	return `lbcli debug finfo - View info about a target file
 
 usage:
    finfo [options] <target>
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 arguments:
-   <target>   the target can be a file path, UUID, or UUID prefix
-`, os.Args[0])
+   <target>   The target can be a file path, UUID, or UUID prefix`
 }
 
-func (c *debugFinfoCmd) parse(args []string) {
-	i := parseOpts(args, c, nil)
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<target>")
-	}
-	c.target = args[0]
+func (c *debugFinfoCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli debug finfo")
+	p.CustomUsage = c.UsageHelp
+	p.Arg("<target>", clap.NewString(&c.target)).Require()
+	p.Parse(args)
 }
 
-func (*debugValidateCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s debug validate - find invalid states within your lockbook
+func (*debugValidateCmd) UsageHelp() string {
+	return `lbcli debug validate - Find invalid states within your lockbook
 
 usage:
    validate [options]
 
 options:
-   -h, --help   show this help message
-`, os.Args[0])
+   -h   Show this help message`
 }
 
-func (c *debugValidateCmd) parse(args []string) {
-	parseOpts(args, c, nil)
+func (c *debugValidateCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli debug validate")
+	p.CustomUsage = c.UsageHelp
+	p.Parse(args)
 }
 
-func (*debugWhoamiCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s debug whoami - print user information for this lockbook
+func (*debugWhoamiCmd) UsageHelp() string {
+	return `lbcli debug whoami - Print user information for this lockbook
 
 usage:
    whoami [options]
 
 options:
-   -h, --help   show this help message
-`, os.Args[0])
+   -h   Show this help message`
 }
 
-func (c *debugWhoamiCmd) parse(args []string) {
-	parseOpts(args, c, nil)
+func (c *debugWhoamiCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli debug whoami")
+	p.CustomUsage = c.UsageHelp
+	p.Parse(args)
 }
 
-func (*debugCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s debug - investigative commands mainly intended for devs
+func (*debugCmd) UsageHelp() string {
+	return `lbcli debug - Investigative commands mainly intended for devs
 
 usage:
    debug [options] <command>
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 subcommands:
-   finfo      view info about a target file
-   validate   find invalid states within your lockbook
-   whoami     print user information for this lockbook
-`, os.Args[0])
+   finfo      View info about a target file
+   validate   Find invalid states within your lockbook
+   whoami     Print user information for this lockbook`
 }
 
-func (c *debugCmd) parse(args []string) {
-	i := parseOpts(args, c, nil)
-	if i >= len(args) {
-		c.printUsage(os.Stderr)
-		os.Exit(1)
+func (c *debugCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli debug")
+	p.CustomUsage = c.UsageHelp
+	rest := p.Parse(args)
+
+	if len(rest) == 0 {
+		p.Fatalf("no subcommand provided")
 	}
-	switch args[i] {
+	switch rest[0] {
 	case "finfo":
-		c.finfo = new(debugFinfoCmd)
-		c.finfo.parse(args[i+1:])
+		c.finfo = &debugFinfoCmd{}
+		c.finfo.Parse(rest[1:])
 	case "validate":
-		c.validate = new(debugValidateCmd)
-		c.validate.parse(args[i+1:])
+		c.validate = &debugValidateCmd{}
+		c.validate.Parse(rest[1:])
 	case "whoami":
-		c.whoami = new(debugWhoamiCmd)
-		c.whoami.parse(args[i+1:])
+		c.whoami = &debugWhoamiCmd{}
+		c.whoami.Parse(rest[1:])
 	default:
-		exitUnknownCmd(c, args[i])
+		p.Fatalf("unknown subcommand '%s'", rest[0])
 	}
 }
 
-func (*exportCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s export - copy a lockbook file to your file system
+func (*exportCmd) UsageHelp() string {
+	return `lbcli export - Copy a lockbook file to your file system
 
 usage:
    export [--quiet] <target> [dest-dir]
    export [--img-fmt <fmt>] <drawing> [dest-dir]
 
 options:
-   -i, --img-fmt  <arg>   format for exporting a lockbook drawing (png|jpeg|pnm|tga|farbfeld|bmp)
-   -q, --quiet            don't output progress on each file
-   -h, --help             show this help message
+   -img-fmt,i  <arg>   Format for exporting a lockbook drawing
+                       (png|jpeg|pnm|tga|farbfeld|bmp)
+   -quiet,q            Don't output progress on each file
+   -h                  Show this help message
 
 arguments:
-   <target>   lockbook file path or ID
-   [dest]     disk file path (default ".")
-`, os.Args[0])
+   <target>   Lockbook file path or ID
+   [dest]     Disk file path (default ".")`
 }
 
-func (c *exportCmd) parse(args []string) {
-	i := parseOpts(args, c, []clapOpt{
-		{"img-fmt", "i", &c.imgFmt},
-		{"quiet", "q", &c.quiet},
-	})
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<target>")
-	}
-	c.target = args[0]
-	if len(args) < 2 {
-		return
-	}
-	c.dest = args[1]
+func (c *exportCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli export")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("img-fmt,i", clap.NewString(&c.imgFmt))
+	p.Flag("quiet,q", clap.NewBool(&c.quiet))
+	p.Arg("<target>", clap.NewString(&c.target)).Require()
+	p.Arg("[dest]", clap.NewString(&c.dest))
+	p.Parse(args)
 }
 
-func (*importCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s import - import files into lockbook from your system
+func (*importCmd) UsageHelp() string {
+	return `lbcli import - Import files into lockbook from your system
 
 usage:
    import [options] <diskpath> [dest]
 
 options:
-   -q, --quiet   don't output progress on each file
-   -h, --help    show this help message
+   -quiet,q   Don't output progress on each file
+   -h         Show this help message
 
 arguments:
-   <diskpath>   the file to import into lockbook
-   [dest]       where to put the imported files in lockbook
-`, os.Args[0])
+   <diskpath>   The file to import into lockbook
+   [dest]       Where to put the imported files in lockbook`
 }
 
-func (c *importCmd) parse(args []string) {
-	i := parseOpts(args, c, []clapOpt{
-		{"quiet", "q", &c.quiet},
-	})
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<diskpath>")
-	}
-	c.diskPath = args[0]
-	if len(args) < 2 {
-		return
-	}
-	c.dest = args[1]
+func (c *importCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli import")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("quiet,q", clap.NewBool(&c.quiet))
+	p.Arg("<diskpath>", clap.NewString(&c.diskPath)).Require()
+	p.Arg("[dest]", clap.NewString(&c.dest))
+	p.Parse(args)
 }
 
-func (*jotCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s jot - quickly record brief thoughts
+func (*jotCmd) UsageHelp() string {
+	return `lbcli jot - Quickly record brief thoughts
 
 usage:
    jot [options] <message>
 
 options:
-   -d, --dateit          prepend the date and time to the message
-   -D, --dateit-after    append the date and time to the message
-   -t, --target  <arg>   the target file (defaults to "/scratch.md")
-   -h, --help            show this help message
+   -dateit,d          Prepend the date and time to the message
+   -dateit-after,D    Append the date and time to the message
+   -target,t  <arg>   The target file (defaults to "/scratch.md")
+   -h                 Show this help message
 
 arguments:
-   <message>   the text you would like to jot down
-`, os.Args[0])
+   <message>   The text you would like to jot down`
 }
 
-func (c *jotCmd) parse(args []string) {
-	i := parseOpts(args, c, []clapOpt{
-		{"dateit", "d", &c.dateIt},
-		{"dateit-after", "D", &c.dateItAfter},
-		{"target", "t", &c.target},
-	})
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<message>")
-	}
-	c.message = args[0]
+func (c *jotCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli jot")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("dateit,d", clap.NewBool(&c.dateIt))
+	p.Flag("dateit-after,D", clap.NewBool(&c.dateItAfter))
+	p.Flag("target,t", clap.NewString(&c.target))
+	p.Arg("<message>", clap.NewString(&c.message)).Require()
+	p.Parse(args)
 }
 
-func (*lsCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s ls - list files in a directory
+func (*lsCmd) UsageHelp() string {
+	return `lbcli ls - List files in a directory
 
 usage:
    ls [options] [target]
 
 options:
-   -s, --short       just display the name (or file path)
-   -r, --recursive   recursively list children of the target directory
-   -t, --tree        recursively list children of the target directory in a tree format
-       --paths       show absolute file paths instead of file names
-       --dirs        only show folders
-       --docs        only show documents
-       --ids         show full UUIDs instead of prefixes
-   -h, --help        show this help message
+   -short,s       Just display the name (or file path)
+   -recursive,r   Recursively list children of the target directory
+   -tree,t        Recursively list children of the target directory in a tree format
+   -paths         Show absolute file paths instead of file names
+   -dirs          Only show folders
+   -docs          Only show documents
+   -ids           Show full UUIDs instead of prefixes
+   -h             Show this help message
 
 arguments:
-   [target]   path or ID of the target directory (defaults to root)
-`, os.Args[0])
+   [target]   Path or ID of the target directory (defaults to root)`
 }
 
-func (c *lsCmd) parse(args []string) {
-	i := parseOpts(args, c, []clapOpt{
-		{"short", "s", &c.short},
-		{"recursive", "r", &c.recursive},
-		{"tree", "t", &c.tree},
-		{"paths", "", &c.paths},
-		{"dirs", "", &c.onlyDirs},
-		{"docs", "", &c.onlyDocs},
-		{"ids", "", &c.fullIDs},
-	})
-	args = args[i:]
-	if len(args) < 1 {
-		return
-	}
-	c.target = args[0]
+func (c *lsCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli ls")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("short,s", clap.NewBool(&c.short))
+	p.Flag("recursive,r", clap.NewBool(&c.recursive))
+	p.Flag("tree,t", clap.NewBool(&c.tree))
+	p.Flag("paths", clap.NewBool(&c.paths))
+	p.Flag("dirs", clap.NewBool(&c.onlyDirs))
+	p.Flag("docs", clap.NewBool(&c.onlyDocs))
+	p.Flag("ids", clap.NewBool(&c.fullIDs))
+	p.Arg("[target]", clap.NewString(&c.target))
+	p.Parse(args)
 }
 
-func (*mkdirCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s mkdir - create a directory or do nothing if it exists
+func (*mkdirCmd) UsageHelp() string {
+	return `lbcli mkdir - Create a directory or do nothing if it exists
 
 usage:
    mkdir [options] <path>
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 arguments:
-   <path>   the path at which to create the directory
-`, os.Args[0])
+   <path>   The path at which to create the directory`
 }
 
-func (c *mkdirCmd) parse(args []string) {
-	i := parseOpts(args, c, nil)
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<path>")
-	}
-	c.path = args[0]
+func (c *mkdirCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli mkdir")
+	p.CustomUsage = c.UsageHelp
+	p.Arg("<path>", clap.NewString(&c.path)).Require()
+	p.Parse(args)
 }
 
-func (*mkdocCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s mkdoc - create a document or do nothing if it exists
+func (*mkdocCmd) UsageHelp() string {
+	return `lbcli mkdoc - Create a document or do nothing if it exists
 
 usage:
    mkdoc [options] <path>
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 arguments:
-   <path>   the path at which to create the document
-`, os.Args[0])
+   <path>   The path at which to create the document`
 }
 
-func (c *mkdocCmd) parse(args []string) {
-	i := parseOpts(args, c, nil)
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<path>")
-	}
-	c.path = args[0]
+func (c *mkdocCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli mkdoc")
+	p.CustomUsage = c.UsageHelp
+	p.Arg("<path>", clap.NewString(&c.path)).Require()
+	p.Parse(args)
 }
 
-func (*mvCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s mv - move a file to another parent
+func (*mvCmd) UsageHelp() string {
+	return `lbcli mv - Move a file to another parent
 
 usage:
    mv [options] <src> <dest>
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 arguments:
-   <src>    the file to move
-   <dest>   the destination directory
-`, os.Args[0])
+   <src>    The file to move
+   <dest>   The destination directory`
 }
 
-func (c *mvCmd) parse(args []string) {
-	i := parseOpts(args, c, nil)
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<src>")
-	}
-	if len(args) < 2 {
-		exitMissingArg(c, "<dest>")
-	}
-	c.src = args[0]
-	c.dest = args[1]
+func (c *mvCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli mv")
+	p.CustomUsage = c.UsageHelp
+	p.Arg("<src>", clap.NewString(&c.src)).Require()
+	p.Arg("<dest>", clap.NewString(&c.dest)).Require()
+	p.Parse(args)
 }
 
-func (*renameCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s rename - rename a file
+func (*renameCmd) UsageHelp() string {
+	return `lbcli rename - Rename a file
 
 usage:
    rename [-f] <target> [new-name]
 
 options:
-   -f, --force   non-interactive (fail instead of prompting for corrections)
-   -h, --help    show this help message
+   -force,f   Non-interactive (fail instead of prompting for corrections)
+   -h         Show this help message
 
 arguments:
-   <target>    the file to rename
-   <newname>   the desired new name
-`, os.Args[0])
+   <target>    The file to rename
+   <newname>   The desired new name`
 }
 
-func (c *renameCmd) parse(args []string) {
-	i := parseOpts(args, c, []clapOpt{
-		{"force", "f", &c.force},
-	})
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<target>")
-	}
-	if len(args) < 2 {
-		exitMissingArg(c, "<newname>")
-	}
-	c.target = args[0]
-	c.newName = args[1]
+func (c *renameCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli rename")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("force,f", clap.NewBool(&c.force))
+	p.Arg("<target>", clap.NewString(&c.target)).Require()
+	p.Arg("<newname>", clap.NewString(&c.newName)).Require()
+	p.Parse(args)
 }
 
-func (*rmCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s rm - delete a file
+func (*rmCmd) UsageHelp() string {
+	return `lbcli rm - Delete a file
 
 usage:
    rm [options] <target>
 
 options:
-   -f, --force   don't prompt for confirmation
-   -h, --help    show this help message
+   -force,f   Don't prompt for confirmation
+   -h         Show this help message
 
 arguments:
-   <target>   lockbook path or ID to delete
-`, os.Args[0])
+   <target>   Lockbook path or ID to delete`
 }
 
-func (c *rmCmd) parse(args []string) {
-	i := parseOpts(args, c, []clapOpt{
-		{"force", "f", &c.force},
-	})
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<target>")
-	}
-	c.target = args[0]
+func (c *rmCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli rm")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("force,f", clap.NewBool(&c.force))
+	p.Arg("<target>", clap.NewString(&c.target)).Require()
+	p.Parse(args)
 }
 
-func (*shareCreateCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s share create - share a file with another lockbook user
+func (*shareCreateCmd) UsageHelp() string {
+	return `lbcli share create - Share a file with another lockbook user
 
 usage:
    create [options] <target> <username>
 
 options:
-       --ro     the other user will not be able to edit the file
-   -h, --help   show this help message
+   -ro   The other user will not be able to edit the file
+   -h    Show this help message
 
 arguments:
-   <target>     the path or ID of the lockbook file you'd like to share
-   <username>   the username of the other lockbook user
-`, os.Args[0])
+   <target>     The path or ID of the lockbook file you'd like to share
+   <username>   The username of the other lockbook user`
 }
 
-func (c *shareCreateCmd) parse(args []string) {
-	i := parseOpts(args, c, []clapOpt{
-		{"ro", "", &c.readOnly},
-	})
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<target>")
-	}
-	if len(args) < 2 {
-		exitMissingArg(c, "<username>")
-	}
-	c.target = args[0]
-	c.username = args[1]
+func (c *shareCreateCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli share create")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("ro", clap.NewBool(&c.readOnly))
+	p.Arg("<target>", clap.NewString(&c.target)).Require()
+	p.Arg("<username>", clap.NewString(&c.username)).Require()
+	p.Parse(args)
 }
 
-func (*sharePendingCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s share pending - list pending shares
+func (*sharePendingCmd) UsageHelp() string {
+	return `lbcli share pending - List pending shares
 
 usage:
    pending [options]
 
 options:
-       --ids    print full UUIDs instead of prefixes
-   -h, --help   show this help message
-`, os.Args[0])
+   -ids   Print full UUIDs instead of prefixes
+   -h     Show this help message`
 }
 
-func (c *sharePendingCmd) parse(args []string) {
-	parseOpts(args, c, []clapOpt{
-		{"ids", "", &c.fullIDs},
-	})
+func (c *sharePendingCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli share pending")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("ids", clap.NewBool(&c.fullIDs))
+	p.Parse(args)
 }
 
-func (*shareAcceptCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s share accept - accept a pending share
+func (*shareAcceptCmd) UsageHelp() string {
+	return `lbcli share accept - Accept a pending share
 
 usage:
    accept [options] <target> <dest> [newname]
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 arguments:
-   <target>    the ID or ID prefix of a pending share
-   <dest>      where to place this in your file tree
-   [newname]   name this file something else
-`, os.Args[0])
+   <target>    The ID or ID prefix of a pending share
+   <dest>      Where to place this in your file tree
+   [newname]   Name this file something else`
 }
 
-func (c *shareAcceptCmd) parse(args []string) {
-	i := parseOpts(args, c, nil)
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<target>")
-	}
-	if len(args) < 2 {
-		exitMissingArg(c, "<dest>")
-	}
-	c.target = args[0]
-	c.dest = args[1]
-	if len(args) < 3 {
-		return
-	}
-	c.newName = args[2]
+func (c *shareAcceptCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli share accept")
+	p.CustomUsage = c.UsageHelp
+	p.Arg("<target>", clap.NewString(&c.target)).Require()
+	p.Arg("<dest>", clap.NewString(&c.dest)).Require()
+	p.Arg("[newname]", clap.NewString(&c.newName))
+	p.Parse(args)
 }
 
-func (*shareRejectCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s share reject - reject a pending share
+func (*shareRejectCmd) UsageHelp() string {
+	return `lbcli share reject - Reject a pending share
 
 usage:
    reject [options] <target>
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 arguments:
-   <target>   the ID or ID prefix of a pending share
-`, os.Args[0])
+   <target>   The ID or ID prefix of a pending share`
 }
 
-func (c *shareRejectCmd) parse(args []string) {
-	i := parseOpts(args, c, nil)
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<target>")
-	}
-	c.target = args[0]
+func (c *shareRejectCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli share reject")
+	p.CustomUsage = c.UsageHelp
+	p.Arg("<target>", clap.NewString(&c.target)).Require()
+	p.Parse(args)
 }
 
-func (*shareCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s share - sharing related commands
+func (*shareCmd) UsageHelp() string {
+	return `lbcli share - Sharing related commands
 
 usage:
    share [options] <command>
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 subcommands:
-   create    share a file with another lockbook user
-   pending   list pending shares
-   accept    accept a pending share
-   reject    reject a pending share
-`, os.Args[0])
+   create    Share a file with another lockbook user
+   pending   List pending shares
+   accept    Accept a pending share
+   reject    Reject a pending share`
 }
 
-func (c *shareCmd) parse(args []string) {
-	i := parseOpts(args, c, nil)
-	if i >= len(args) {
-		c.printUsage(os.Stderr)
-		os.Exit(1)
+func (c *shareCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli share")
+	p.CustomUsage = c.UsageHelp
+	rest := p.Parse(args)
+
+	if len(rest) == 0 {
+		p.Fatalf("no subcommand provided")
 	}
-	switch args[i] {
+	switch rest[0] {
 	case "create":
-		c.create = new(shareCreateCmd)
-		c.create.parse(args[i+1:])
+		c.create = &shareCreateCmd{}
+		c.create.Parse(rest[1:])
 	case "pending":
-		c.pending = new(sharePendingCmd)
-		c.pending.parse(args[i+1:])
+		c.pending = &sharePendingCmd{}
+		c.pending.Parse(rest[1:])
 	case "accept":
-		c.accept = new(shareAcceptCmd)
-		c.accept.parse(args[i+1:])
+		c.accept = &shareAcceptCmd{}
+		c.accept.Parse(rest[1:])
 	case "reject":
-		c.reject = new(shareRejectCmd)
-		c.reject.parse(args[i+1:])
+		c.reject = &shareRejectCmd{}
+		c.reject.Parse(rest[1:])
 	default:
-		exitUnknownCmd(c, args[i])
+		p.Fatalf("unknown subcommand '%s'", rest[0])
 	}
 }
 
-func (*syncCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s sync - get updates from the server and push changes
+func (*syncCmd) UsageHelp() string {
+	return `lbcli sync - Get updates from the server and push changes
 
 usage:
    sync [options]
 
 options:
-   -s, --status    show last synced and which operations a sync would perform
-   -v, --verbose   output every sync step and progress
-   -h, --help      show this help message
-`, os.Args[0])
+   -status,s    Show last synced and which operations a sync would perform
+   -verbose,v   Output every sync step and progress
+   -h           Show this help message`
 }
 
-func (c *syncCmd) parse(args []string) {
-	parseOpts(args, c, []clapOpt{
-		{"status", "s", &c.status},
-		{"verbose", "v", &c.verbose},
-	})
+func (c *syncCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli sync")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("status,s", clap.NewBool(&c.status))
+	p.Flag("verbose,v", clap.NewBool(&c.verbose))
+	p.Parse(args)
 }
 
-func (*usageCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s usage - local and server disk utilization (uncompressed and compressed)
+func (*usageCmd) UsageHelp() string {
+	return `lbcli usage - Local and server disk utilization (uncompressed and compressed)
 
 usage:
    usage [-e]
 
 options:
-   -e, --exact   show amounts in bytes instead of as human readable values
-   -h, --help    show this help message
-`, os.Args[0])
+   -exact,e   Show amounts in bytes instead of as human readable values
+   -h         Show this help message`
 }
 
-func (c *usageCmd) parse(args []string) {
-	parseOpts(args, c, []clapOpt{
-		{"exact", "e", &c.exact},
-	})
+func (c *usageCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli usage")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("exact,e", clap.NewBool(&c.exact))
+	p.Parse(args)
 }
 
-func (*writeCmd) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s write - write data from stdin to a lockbook document
+func (*writeCmd) UsageHelp() string {
+	return `lbcli write - Write data from stdin to a lockbook document
 
 usage:
    write [--trunc] <target>
 
 options:
-       --trunc   truncate the file instead of appending to it
-   -h, --help    show this help message
+   -trunc   Truncate the file instead of appending to it
+   -h       Show this help message
 
 arguments:
-   <target>   lockbook path or ID to write
-`, os.Args[0])
+   <target>   Lockbook path or ID to write`
 }
 
-func (c *writeCmd) parse(args []string) {
-	i := parseOpts(args, c, []clapOpt{
-		{"trunc", "", &c.trunc},
-	})
-	args = args[i:]
-	if len(args) < 1 {
-		exitMissingArg(c, "<target>")
-	}
-	c.target = args[0]
+func (c *writeCmd) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli write")
+	p.CustomUsage = c.UsageHelp
+	p.Flag("trunc", clap.NewBool(&c.trunc))
+	p.Arg("<target>", clap.NewString(&c.target)).Require()
+	p.Parse(args)
 }
 
-func (*lbcli) printUsage(to *os.File) {
-	fmt.Fprintf(to, `%[1]s - an unofficial lockbook cli
+func (*lbcli) UsageHelp() string {
+	return `lbcli - An unofficial lockbook cli
 
 usage:
-   %[1]s [options] <command>
+   lbcli [options] <command>
 
 options:
-   -h, --help   show this help message
+   -h   Show this help message
 
 subcommands:
-   acct     account related commands
-   cat      print a document's content
-   debug    investigative commands mainly intended for devs
-   export   copy a lockbook file to your file system
-   import   import files into lockbook from your system
-   jot      quickly record brief thoughts
-   ls       list files in a directory
-   mkdir    create a directory or do nothing if it exists
-   mkdoc    create a document or do nothing if it exists
-   mv       move a file to another parent
-   rename   rename a file
-   rm       delete a file
-   share    sharing related commands
-   sync     get updates from the server and push changes
-   usage    local and server disk utilization (uncompressed and compressed)
-   write    write data from stdin to a lockbook document
+   acct     Account related commands
+   cat      Print a document's content
+   debug    Investigative commands mainly intended for devs
+   export   Copy a lockbook file to your file system
+   import   Import files into lockbook from your system
+   jot      Quickly record brief thoughts
+   ls       List files in a directory
+   mkdir    Create a directory or do nothing if it exists
+   mkdoc    Create a document or do nothing if it exists
+   mv       Move a file to another parent
+   rename   Rename a file
+   rm       Delete a file
+   share    Sharing related commands
+   sync     Get updates from the server and push changes
+   usage    Local and server disk utilization (uncompressed and compressed)
+   write    Write data from stdin to a lockbook document
 
-run '%[1]s <subcommand> -h' for more information on specific commands.
-`, os.Args[0])
+Run 'lbcli <subcommand> -h' for more information on specific commands.`
 }
 
-func (c *lbcli) parse(args []string) {
-	if len(args) > 0 && len(args) == len(os.Args) {
-		args = args[1:]
+func (c *lbcli) Parse(args []string) {
+	p := clap.NewCommandParser("lbcli")
+	p.CustomUsage = c.UsageHelp
+	rest := p.Parse(args)
+
+	if len(rest) == 0 {
+		p.Fatalf("no subcommand provided")
 	}
-	i := parseOpts(args, c, nil)
-	if i >= len(args) {
-		c.printUsage(os.Stderr)
-		os.Exit(1)
-	}
-	switch args[i] {
+	switch rest[0] {
 	case "acct":
-		c.acct = new(acctCmd)
-		c.acct.parse(args[i+1:])
+		c.acct = &acctCmd{}
+		c.acct.Parse(rest[1:])
 	case "cat":
-		c.cat = new(catCmd)
-		c.cat.parse(args[i+1:])
+		c.cat = &catCmd{}
+		c.cat.Parse(rest[1:])
 	case "debug":
-		c.debug = new(debugCmd)
-		c.debug.parse(args[i+1:])
+		c.debug = &debugCmd{}
+		c.debug.Parse(rest[1:])
 	case "export":
-		c.export = new(exportCmd)
-		c.export.parse(args[i+1:])
+		c.export = &exportCmd{}
+		c.export.Parse(rest[1:])
 	case "import":
-		c.imprt = new(importCmd)
-		c.imprt.parse(args[i+1:])
+		c.imprt = &importCmd{}
+		c.imprt.Parse(rest[1:])
 	case "jot":
-		c.jot = new(jotCmd)
-		c.jot.parse(args[i+1:])
-	case "ls":
-		c.ls = new(lsCmd)
-		c.ls.parse(args[i+1:])
+		c.jot = &jotCmd{}
+		c.jot.Parse(rest[1:])
+	case "ls", "list":
+		c.ls = &lsCmd{}
+		c.ls.Parse(rest[1:])
 	case "mkdir":
-		c.mkdir = new(mkdirCmd)
-		c.mkdir.parse(args[i+1:])
+		c.mkdir = &mkdirCmd{}
+		c.mkdir.Parse(rest[1:])
 	case "mkdoc":
-		c.mkdoc = new(mkdocCmd)
-		c.mkdoc.parse(args[i+1:])
-	case "mv":
-		c.mv = new(mvCmd)
-		c.mv.parse(args[i+1:])
+		c.mkdoc = &mkdocCmd{}
+		c.mkdoc.Parse(rest[1:])
+	case "mv", "move":
+		c.mv = &mvCmd{}
+		c.mv.Parse(rest[1:])
 	case "rename":
-		c.rename = new(renameCmd)
-		c.rename.parse(args[i+1:])
+		c.rename = &renameCmd{}
+		c.rename.Parse(rest[1:])
 	case "rm":
-		c.rm = new(rmCmd)
-		c.rm.parse(args[i+1:])
+		c.rm = &rmCmd{}
+		c.rm.Parse(rest[1:])
 	case "share":
-		c.share = new(shareCmd)
-		c.share.parse(args[i+1:])
+		c.share = &shareCmd{}
+		c.share.Parse(rest[1:])
 	case "sync":
-		c.sync = new(syncCmd)
-		c.sync.parse(args[i+1:])
+		c.sync = &syncCmd{}
+		c.sync.Parse(rest[1:])
 	case "usage":
-		c.usage = new(usageCmd)
-		c.usage.parse(args[i+1:])
+		c.usage = &usageCmd{}
+		c.usage.Parse(rest[1:])
 	case "write":
-		c.write = new(writeCmd)
-		c.write.parse(args[i+1:])
+		c.write = &writeCmd{}
+		c.write.Parse(rest[1:])
 	default:
-		exitUnknownCmd(c, args[i])
+		p.Fatalf("unknown subcommand '%s'", rest[0])
 	}
 }

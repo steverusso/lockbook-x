@@ -21,6 +21,8 @@ github.com/gofrs/uuid v4.3.1+incompatible h1:0/KbAdpx3UXAx1kEOWHJeOkpbgRFGHVgv+C
 github.com/gofrs/uuid v4.3.1+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
 github.com/steverusso/gio-fonts v0.0.0-20221207034752-d3d43d7eae48 h1:ykYdzm6qenf6q9PDzy756ogG2QovKTwGJrskCfjr+XI=
 github.com/steverusso/gio-fonts v0.0.0-20221207034752-d3d43d7eae48/go.mod h1:hXPPLxKVyMb340G0pSyAHM9In2LK+IiKWU3oR/y3UUE=
+github.com/steverusso/goclap v0.3.1 h1:EXZXyCMruz5IsjK0amWDzW8QWVCjb1YEiJJUX6Aw+EM=
+github.com/steverusso/goclap v0.3.1/go.mod h1:eUGf0la6rlEBQnDpHwX6CBYVzy5bi6wVM9hPcBjQxHU=
 github.com/steverusso/mdedit v0.0.0-20230207184019-4ac49a57d2f9 h1:nQSnxd/iDyrSEnBT5qBuh3cHoc8I5s7RffRtrWNv5e0=
 github.com/steverusso/mdedit v0.0.0-20230207184019-4ac49a57d2f9/go.mod h1:gj0UP9Zy+zfsjEdNkbBPIVzYCky2fFcoFkL8fDqGlmU=
 github.com/yuin/goldmark v1.5.3 h1:3HUJmBFbQW9fhQOzMgseU134xfi6hU+mjWywx5Ty+/M=

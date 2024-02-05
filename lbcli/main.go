@@ -219,7 +219,7 @@ func run() error {
 	}
 
 	lb := lbcli{}
-	lb.parse(os.Args)
+	lb.Parse(os.Args)
 
 	// Make sure there's no account when initializing or restoring, and that there is an
 	// account for all other actions.

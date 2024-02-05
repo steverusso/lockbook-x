@@ -19,6 +19,7 @@ tasks:
     dir: lbcli
     cmds:
       - task: c-ffi-v2
+      - go generate ./...
       - task: go-fmt
       - go build {{.GO_LDFLAGS}}
       - task: go-lint

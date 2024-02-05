@@ -10,6 +10,8 @@ import (
 )
 
 // List files in a directory.
+//
+// clap:cmd_aliases list
 type lsCmd struct {
 	// Just display the name (or file path).
 	//
