@@ -221,7 +221,7 @@ type WorkCalculated struct {
 
 type WorkUnit struct {
 	Type WorkUnitType
-	File File
+	ID   FileID
 }
 
 type WorkUnitType int
@@ -233,18 +233,9 @@ const (
 
 // SyncProgress is the data sent (via closure) at certain stages of sync.
 type SyncProgress struct {
-	Total           uint64
-	Progress        uint64
-	CurrentWorkUnit ClientWorkUnit
-}
-
-// ClientWorkUnit is which type of work sync is performing. The type of work unit is
-// determined by which field is non-zero.
-type ClientWorkUnit struct {
-	PullMetadata bool
-	PushMetadata bool
-	PullDocument *File
-	PushDocument *File
+	Total    uint64
+	Progress uint64
+	Msg      string
 }
 
 type UsageMetrics struct {

@@ -57,20 +57,7 @@ func (c *syncCmd) run(core lockbook.Core) error {
 	var syncProgress func(lockbook.SyncProgress)
 	if c.verbose {
 		syncProgress = func(sp lockbook.SyncProgress) {
-			fmt.Printf("(%d/%d) ", sp.Progress, sp.Total)
-			cwu := sp.CurrentWorkUnit
-			switch {
-			case cwu.PullMetadata:
-				fmt.Println("-> file tree updates...")
-			case cwu.PushMetadata:
-				fmt.Println("<- file tree updates...")
-			case cwu.PullDocument != nil:
-				idPrefix := cwu.PullDocument.ID.String()[:idPrefixLen]
-				fmt.Printf("-> %s (%s)...\n", cwu.PullDocument.Name, idPrefix)
-			case cwu.PushDocument != nil:
-				idPrefix := cwu.PushDocument.ID.String()[:idPrefixLen]
-				fmt.Printf("<- %s (%s)...\n", cwu.PushDocument.Name, idPrefix)
-			}
+			fmt.Printf("(%d/%d) %s\n", sp.Progress, sp.Total, sp.Msg)
 		}
 	}
 	err := core.SyncAll(syncProgress)
@@ -93,7 +80,7 @@ func printSyncStatus(core lockbook.Core) error {
 		if wu.Type == lockbook.WorkUnitTypeServer {
 			pushOrPull = "pulled"
 		}
-		fmt.Printf("%s needs to be %s\n", wu.File.Name, pushOrPull)
+		fmt.Printf("%s needs to be %s\n", wu.ID, pushOrPull)
 	}
 	lastSyncedAt, err := core.GetLastSyncedHumanString()
 	if err != nil {

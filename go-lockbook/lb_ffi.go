@@ -307,7 +307,7 @@ func (l *lbCoreFFI) CalculateWork() (WorkCalculated, error) {
 		cUnit := C.lb_work_calc_index(r.ok, i)
 		workUnits[i] = WorkUnit{
 			Type: WorkUnitType(cUnit.typ),
-			File: newFileFromC(&cUnit.file),
+			ID:   goFileID(cUnit.id),
 		}
 	}
 	return WorkCalculated{
@@ -329,22 +329,10 @@ func (l *lbCoreFFI) SyncAll(fn func(SyncProgress)) error {
 		if fn == nil {
 			return
 		}
-		cwu := ClientWorkUnit{
-			PullMetadata: bool(cSP.current_wu.pull_meta),
-			PushMetadata: bool(cSP.current_wu.push_meta),
-		}
-		if cSP.current_wu.pull_doc != nil {
-			f := newFileFromC(cSP.current_wu.pull_doc)
-			cwu.PullDocument = &f
-		}
-		if cSP.current_wu.push_doc != nil {
-			f := newFileFromC(cSP.current_wu.push_doc)
-			cwu.PushDocument = &f
-		}
 		fn(SyncProgress{
-			Total:           uint64(cSP.total),
-			Progress:        uint64(cSP.progress),
-			CurrentWorkUnit: cwu,
+			Total:    uint64(cSP.total),
+			Progress: uint64(cSP.progress),
+			Msg:      C.GoString(cSP.msg),
 		})
 	})
 	defer handle.Delete()

@@ -44,9 +44,9 @@ tasks:
     - go vet ./...
 
   c-ffi-v2:
-    dir: lockbook/libs/c_interface_v2
+    dir: lockbook/libs/lb/c_interface_v2
     vars:
-      C_INTERFACE_HEADER: ../../../lockbook_core.h
+      C_INTERFACE_HEADER: ../../../../lockbook_core.h
     cmds:
       - cargo build -q --release
       - cbindgen src/lib.rs --config cbindgen.toml > {{.C_INTERFACE_HEADER}}
@@ -54,5 +54,5 @@ tasks:
       - ../**/*
       - cbindgen.toml
     generates:
-      - ../../target/release/libc_interface_v2.a
+      - ../../../target/release/libc_interface_v2.a
       - ./{{.C_INTERFACE_HEADER}}

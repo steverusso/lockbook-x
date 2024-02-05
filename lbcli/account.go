@@ -87,7 +87,7 @@ func (c *acctInitCmd) run(core lockbook.Core) error {
 //
 // The restore command reads the secret account string from standard input (stdin).
 // In other words, pipe your account string to this command like:
-// 'cat lbkey.txt | lbcli restore'.
+// 'cat lbkey.txt | lbcli acct restore'.
 type acctRestoreCmd struct {
 	// Don't perform the initial sync.
 	//
